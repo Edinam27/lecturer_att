@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || !['ADMIN', 'LECTURER', 'COORDINATOR'].includes(session.user.role)) {
+    if (!session?.user?.id || !['ADMIN', 'LECTURER', 'COORDINATOR', 'CLASS_REP'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -238,6 +238,21 @@ export async function GET(request: NextRequest) {
         course: {
           programmeId: { in: programmeIds }
         }
+      }
+    } else if (session.user.role === 'CLASS_REP') {
+      // Class rep sees their class schedules
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { classGroupsAsRep: true }
+      })
+
+      if (!user?.classGroupsAsRep || user.classGroupsAsRep.length === 0) {
+        return NextResponse.json({ error: 'Class group not found' }, { status: 404 })
+      }
+
+      const classGroupIds = user.classGroupsAsRep.map(group => group.id)
+      whereClause = {
+        classGroupId: { in: classGroupIds }
       }
     }
 

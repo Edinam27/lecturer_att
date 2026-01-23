@@ -5,7 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChartBarIcon, DocumentArrowDownIcon, UserGroupIcon, AcademicCapIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, XCircleIcon, CalendarIcon } from '@heroicons/react/24/outline'
-import ScheduledReportsManager from '@/components/reports/ScheduledReportsManager'
+import dynamic from 'next/dynamic'
+
+const ScheduledReportsManager = dynamic(
+  () => import('@/components/reports/ScheduledReportsManager'),
+  { ssr: false }
+)
 
 interface ReportData {
   overview: {

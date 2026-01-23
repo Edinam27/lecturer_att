@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client'
+import { UserRole } from '@/types/auth-roles'
 
 // Define all possible permissions in the system
 export enum Permission {

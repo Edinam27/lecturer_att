@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { Permission, hasPermission, checkResourcePermission } from '@/lib/permissions'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '@/types/auth-roles'
 
 // Permission middleware configuration
 interface PermissionConfig {

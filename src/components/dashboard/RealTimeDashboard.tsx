@@ -71,11 +71,12 @@ export default function RealTimeDashboard({
       
       const response = await fetch('/api/analytics?type=overview&period=7d');
       if (!response.ok) {
-        if (response.status === 401) {
-          console.error('Authentication required for dashboard data');
+        if (response.status === 401 || response.status === 404) {
+          console.error('Authentication session invalid');
           return;
         }
-        throw new Error('Failed to fetch dashboard data');
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch dashboard data: ${response.status} ${errorText}`);
       }
       
       const data = await response.json();

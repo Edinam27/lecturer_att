@@ -41,7 +41,7 @@ export default function VerifyAttendancePage() {
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
+    if (!session || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN' && session.user.role !== 'CLASS_REP')) {
       router.push('/dashboard')
       return
     }

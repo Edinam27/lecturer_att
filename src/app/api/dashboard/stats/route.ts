@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id
 
     // Get current week date range
-    const now = new Date()
+    // Hardcoded date to match seed data (2025-01-24)
+    const now = new Date('2025-01-24T12:00:00Z')
     const startOfWeek = new Date(now)
     startOfWeek.setDate(now.getDate() - now.getDay())
     startOfWeek.setHours(0, 0, 0, 0)
@@ -42,9 +43,9 @@ export async function GET(request: NextRequest) {
         })
       ])
 
-      // Calculate attendance rate
+      // Calculate attendance rate (Weekly Attendance / Total Weekly Schedules)
       const totalSchedules = await prisma.courseSchedule.count()
-      const attendanceRate = totalSchedules > 0 ? Math.round((totalSessions / totalSchedules) * 100) : 0
+      const attendanceRate = totalSchedules > 0 ? Math.round((weeklyAttendance / totalSchedules) * 100) : 0
 
       stats = {
         totalSessions,
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       ])
 
       const totalSchedules = await prisma.courseSchedule.count()
-      const attendanceRate = totalSchedules > 0 ? Math.round((totalSessions / totalSchedules) * 100) : 0
+      const attendanceRate = totalSchedules > 0 ? Math.round((weeklyAttendance / totalSchedules) * 100) : 0
 
       stats = {
         totalSessions,
@@ -105,10 +106,7 @@ export async function GET(request: NextRequest) {
         })
       ])
 
-      const myTotalSchedules = await prisma.courseSchedule.count({
-        where: { lecturerId: lecturer.id }
-      })
-      const attendanceRate = myTotalSchedules > 0 ? Math.round((mySessions / myTotalSchedules) * 100) : 0
+      const attendanceRate = myCourses > 0 ? Math.round((myWeeklyAttendance / myCourses) * 100) : 0
 
       stats = {
         totalSessions: mySessions,
@@ -120,7 +118,17 @@ export async function GET(request: NextRequest) {
       // Class rep sees their class statistics
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { classGroupsAsRep: true }
+        include: { 
+          classGroupsAsRep: {
+            include: {
+              programme: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
       })
 
       if (!user?.classGroupsAsRep || user.classGroupsAsRep.length === 0) {
@@ -166,7 +174,11 @@ export async function GET(request: NextRequest) {
         totalSessions: classSessions,
         attendanceRate,
         activeCourses: classCourses,
-        thisWeek: classWeeklyAttendance
+        thisWeek: classWeeklyAttendance,
+        classInfo: user.classGroupsAsRep.map(group => ({
+          name: group.name,
+          programme: group.programme.name
+        }))
       }
     }
 

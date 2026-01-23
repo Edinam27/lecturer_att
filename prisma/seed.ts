@@ -60,7 +60,10 @@ async function main() {
     { email: 'lecturer5@upsa.edu.gh', firstName: 'Prof. Robert', lastName: 'Miller', employeeId: 'EMP005', rank: 'Professor', department: 'Leadership' },
     { email: 'lecturer6@upsa.edu.gh', firstName: 'Dr. Lisa', lastName: 'Anderson', employeeId: 'EMP006', rank: 'Lecturer', department: 'Procurement' },
     { email: 'lecturer7@upsa.edu.gh', firstName: 'Dr. David', lastName: 'Taylor', employeeId: 'EMP007', rank: 'Senior Lecturer', department: 'Law' },
-    { email: 'lecturer8@upsa.edu.gh', firstName: 'Prof. Jennifer', lastName: 'White', employeeId: 'EMP008', rank: 'Associate Professor', department: 'Auditing' }
+    { email: 'lecturer8@upsa.edu.gh', firstName: 'Prof. Jennifer', lastName: 'White', employeeId: 'EMP008', rank: 'Associate Professor', department: 'Auditing' },
+    // Online Lecturers for Fridays
+    { email: 'online.lecturer1@upsa.edu.gh', firstName: 'Dr. Online', lastName: 'One', employeeId: 'ONL001', rank: 'Senior Lecturer', department: 'Computer Science' },
+    { email: 'online.lecturer2@upsa.edu.gh', firstName: 'Dr. Online', lastName: 'Two', employeeId: 'ONL002', rank: 'Lecturer', department: 'Information Systems' }
   ]
 
   for (const data of lecturerData) {
@@ -502,12 +505,12 @@ async function main() {
 
   // Create multiple class groups
   const classGroups = [
-    { name: 'MBA-AF-2024-FT', programme: 'MBA in Accounting & Finance', year: 2024, mode: 'Full-time', repIndex: 0 },
-    { name: 'MBA-AF-2024-PT', programme: 'MBA in Accounting & Finance', year: 2024, mode: 'Part-time', repIndex: 1 },
-    { name: 'MBA-MKT-2024-FT', programme: 'MBA in Marketing', year: 2024, mode: 'Full-time', repIndex: 2 },
-    { name: 'MSC-LDR-2024-FT', programme: 'MSc in Leadership', year: 2024, mode: 'Full-time', repIndex: 3 },
-    { name: 'MBA-PM-2024-PT', programme: 'MBA in Project Management', year: 2024, mode: 'Part-time', repIndex: 4 },
-    { name: 'MBA-AF-2023-FT', programme: 'MBA in Accounting & Finance', year: 2023, mode: 'Full-time', repIndex: 0 }
+    { name: 'MBA-AF-2024-FT', programme: 'MBA in Accounting & Finance', year: 2024, mode: 'Full-time', repIndex: 0, studentCount: 45 },
+    { name: 'MBA-AF-2024-PT', programme: 'MBA in Accounting & Finance', year: 2024, mode: 'Part-time', repIndex: 1, studentCount: 30 },
+    { name: 'MBA-MKT-2024-FT', programme: 'MBA in Marketing', year: 2024, mode: 'Full-time', repIndex: 2, studentCount: 35 },
+    { name: 'MSC-LDR-2024-FT', programme: 'MSc in Leadership', year: 2024, mode: 'Full-time', repIndex: 3, studentCount: 25 },
+    { name: 'MBA-PM-2024-PT', programme: 'MBA in Project Management', year: 2024, mode: 'Part-time', repIndex: 4, studentCount: 40 },
+    { name: 'MBA-AF-2023-FT', programme: 'MBA in Accounting & Finance', year: 2023, mode: 'Full-time', repIndex: 0, studentCount: 50 }
   ]
 
   const createdClassGroups = []
@@ -522,13 +525,16 @@ async function main() {
             admissionYear: groupData.year
           }
         },
-        update: {},
+        update: {
+            studentCount: groupData.studentCount
+        },
         create: {
           name: groupData.name,
           programmeId: programme.id,
           admissionYear: groupData.year,
           deliveryMode: groupData.mode,
-          classRepId: classRepUsers[groupData.repIndex]?.id
+          classRepId: classRepUsers[groupData.repIndex]?.id,
+          studentCount: groupData.studentCount
         }
       })
       createdClassGroups.push(classGroup)
@@ -565,7 +571,21 @@ async function main() {
     
     // Additional schedules for 2023 cohort
     { courseCode: 'MBA-ACC-504', classGroup: 'MBA-AF-2023-FT', lecturerIndex: 7, day: 3, start: '09:00', end: '12:00', classroom: 'MAIN-102', type: 'LECTURE' },
-    { courseCode: 'MBA-FIN-505', classGroup: 'MBA-AF-2023-FT', lecturerIndex: 1, day: 4, start: '14:00', end: '17:00', classroom: 'ANNEX-201', type: 'LAB' }
+    { courseCode: 'MBA-FIN-505', classGroup: 'MBA-AF-2023-FT', lecturerIndex: 1, day: 4, start: '14:00', end: '17:00', classroom: 'ANNEX-201', type: 'LAB' },
+
+    // Online Friday Schedules (Day 5 = Friday)
+    { courseCode: 'MBA-MKT-503', classGroup: 'MBA-MKT-2024-FT', lecturerIndex: 8, day: 5, start: '18:00', end: '20:00', classroom: 'VIRTUAL-01', type: 'VIRTUAL' },
+    { courseCode: 'MSC-LDR-503', classGroup: 'MSC-LDR-2024-FT', lecturerIndex: 9, day: 5, start: '18:00', end: '20:00', classroom: 'VIRTUAL-02', type: 'VIRTUAL' },
+
+    // New Friday Schedules for testing "Take Attendance"
+    { courseCode: 'MBA-ACC-501', classGroup: 'MBA-AF-2024-FT', lecturerIndex: 0, day: 5, start: '09:00', end: '12:00', classroom: 'MAIN-101', type: 'LECTURE' },
+    { courseCode: 'MBA-FIN-502', classGroup: 'MBA-AF-2024-FT', lecturerIndex: 1, day: 5, start: '13:00', end: '16:00', classroom: 'MAIN-102', type: 'LECTURE' },
+    { courseCode: 'MBA-MKT-501', classGroup: 'MBA-MKT-2024-FT', lecturerIndex: 2, day: 5, start: '09:00', end: '12:00', classroom: 'ANNEX-101', type: 'LECTURE' },
+    { courseCode: 'MBA-MGT-503', classGroup: 'MBA-AF-2024-FT', lecturerIndex: 3, day: 5, start: '14:00', end: '17:00', classroom: 'MAIN-201', type: 'SEMINAR' },
+    { courseCode: 'MSC-LDR-501', classGroup: 'MSC-LDR-2024-FT', lecturerIndex: 4, day: 5, start: '13:00', end: '16:00', classroom: 'EXEC-101', type: 'SEMINAR' },
+    { courseCode: 'MBA-PM-501', classGroup: 'MBA-PM-2024-PT', lecturerIndex: 5, day: 5, start: '18:00', end: '21:00', classroom: 'ANNEX-101', type: 'LECTURE' },
+    { courseCode: 'MBA-PM-502', classGroup: 'MBA-PM-2024-PT', lecturerIndex: 6, day: 5, start: '18:00', end: '21:00', classroom: 'VIRTUAL-02', type: 'VIRTUAL' },
+    { courseCode: 'MBA-ACC-504', classGroup: 'MBA-AF-2023-FT', lecturerIndex: 7, day: 5, start: '09:00', end: '12:00', classroom: 'MAIN-102', type: 'LECTURE' }
   ]
 
   const createdSchedules = []
@@ -593,7 +613,8 @@ async function main() {
   }
 
   // Create realistic attendance records for the past few weeks
-  const today = new Date()
+  // NOTE: Hardcoded date to ensure data is generated for 2025 even if local system date is incorrect (e.g. 2026)
+  const today = new Date('2025-01-24')
   const attendanceRecords = []
   
   for (const schedule of createdSchedules) {
@@ -619,6 +640,19 @@ async function main() {
           const classroom = createdClassrooms.find(c => c.id === schedule.classroomId)
           const isVirtual = schedule.sessionType === 'VIRTUAL'
           
+          // Generate verification status: 70% verified, 15% disputed, 15% pending (null)
+          const verifRand = Math.random();
+          let supervisorVerified: boolean | null = true;
+          let supervisorComment: string | null = 'Lecturer arrived on time and conducted full session';
+
+          if (verifRand > 0.85) {
+            supervisorVerified = null; // Pending
+            supervisorComment = null;
+          } else if (verifRand > 0.70) {
+            supervisorVerified = false; // Disputed
+            supervisorComment = 'Lecturer was not present at the start time';
+          }
+
           await prisma.attendanceRecord.create({
             data: {
               lecturerId: schedule.lecturerId,
@@ -628,8 +662,8 @@ async function main() {
               gpsLongitude: isVirtual ? null : (classroom?.gpsLongitude || -0.1870),
               locationVerified: !isVirtual,
               method: isVirtual ? 'virtual' : 'onsite',
-              supervisorVerified: Math.random() > 0.1, // 90% supervisor verification rate
-              supervisorComment: Math.random() > 0.7 ? 'Lecturer arrived on time and conducted full session' : null
+              supervisorVerified: supervisorVerified,
+              supervisorComment: supervisorComment
             }
           })
         }

@@ -74,27 +74,12 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { name, code, level, duration, description, coordinatorId } = body
+    const { name, level, duration, description, coordinatorId } = body
 
     // Validate required fields
-    if (!name || !code || !level || !duration) {
+    if (!name || !level || !duration) {
       return NextResponse.json(
-        { error: 'Name, code, level, and duration are required' },
-        { status: 400 }
-      )
-    }
-
-    // Check for duplicate programme code (excluding current programme)
-    const duplicateCode = await prisma.programme.findFirst({
-      where: {
-        code,
-        id: { not: params.id }
-      }
-    })
-
-    if (duplicateCode) {
-      return NextResponse.json(
-        { error: 'Programme code already exists' },
+        { error: 'Name, level, and duration are required' },
         { status: 400 }
       )
     }
@@ -116,9 +101,8 @@ export async function PUT(
 
     const dataToUpdate: any = {
       name,
-      code,
       level,
-      duration: parseInt(duration),
+      durationSemesters: parseInt(duration),
       description: description || null
     }
 

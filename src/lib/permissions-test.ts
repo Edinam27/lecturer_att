@@ -1,5 +1,5 @@
 import { Permission, ROLE_PERMISSIONS, hasPermission, hasAnyPermission, hasAllPermissions } from './permissions'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '@/types/auth-roles'
 
 /**
  * Test suite for the role-based permissions system

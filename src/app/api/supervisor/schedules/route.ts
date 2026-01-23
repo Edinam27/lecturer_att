@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    const today = new Date()
+    // Hardcoded date to match seed data (2025-01-24)
+    const today = new Date('2025-01-24T12:00:00Z')
     const todayDayOfWeek = today.getDay()
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)

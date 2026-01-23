@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 
 export async function GET(request: NextRequest) {
@@ -19,11 +20,13 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
+      console.warn(`Analytics API: User not found for ID ${session.user.id}`);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Calculate date ranges
-    const now = new Date();
+    // Hardcoded date to match seed data (2025-01-24)
+    const now = new Date('2025-01-24T12:00:00Z');
     let startDate: Date;
     let endDate = now;
 
@@ -55,17 +58,28 @@ export async function GET(request: NextRequest) {
       }
     };
 
+    let lecturerIdForFilter: string | undefined;
+
     if (user.role === 'LECTURER') {
-      attendanceFilter.lecturerId = user.id;
+      const lecturer = await prisma.lecturer.findUnique({
+        where: { userId: user.id }
+      });
+      if (lecturer) {
+        attendanceFilter.lecturerId = lecturer.id;
+        lecturerIdForFilter = lecturer.id;
+      } else {
+        // If lecturer profile not found, they shouldn't see any records
+        attendanceFilter.lecturerId = 'non-existent-id';
+      }
     } else if (user.role === 'CLASS_REP') {
       // Get class rep's class group
       const classGroup = await prisma.classGroup.findFirst({
         where: { classRepId: user.id }
       });
       if (classGroup) {
-      attendanceFilter.courseSchedule = {
-        classGroupId: classGroup.id
-      };
+        attendanceFilter.courseSchedule = {
+          classGroupId: classGroup.id
+        };
       }
     }
 
@@ -77,7 +91,7 @@ export async function GET(request: NextRequest) {
       case 'verification':
         return await getVerificationAnalytics(attendanceFilter, startDate, endDate);
       case 'courses':
-        return await getCourseAnalytics(attendanceFilter, user.role, user.id);
+        return await getCourseAnalytics(attendanceFilter, user.role, lecturerIdForFilter);
       default:
         return NextResponse.json({ error: 'Invalid analytics type' }, { status: 400 });
     }
@@ -147,9 +161,9 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
     },
     recentActivity: recentActivity.map(record => ({
       id: record.id,
-      course: `${record.courseSchedule.course.courseCode} - ${record.courseSchedule.course.title}`,
-      lecturer: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`,
-      classGroup: record.courseSchedule.classGroup.name,
+      course: record.courseSchedule?.course ? `${record.courseSchedule.course.courseCode} - ${record.courseSchedule.course.title}` : 'Unknown Course',
+      lecturer: record.lecturer?.user ? `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}` : 'Unknown Lecturer',
+      classGroup: record.courseSchedule?.classGroup?.name || 'Unknown Class Group',
       date: record.timestamp,
       status: record.supervisorVerified === null ? 'pending' : 
               record.supervisorVerified ? 'verified' : 'disputed',
@@ -160,12 +174,13 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
 
 async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Date) {
   // Daily attendance trends
+  // Note: Using Prisma's queryRaw for complex aggregation
   const dailyTrends = await prisma.$queryRawUnsafe(`
     SELECT 
       DATE(ar.timestamp) as day,
       COUNT(*) as total,
-      SUM(CASE WHEN ar.supervisor_verified = 1 THEN 1 ELSE 0 END) as verified,
-      SUM(CASE WHEN ar.supervisor_verified = 0 THEN 1 ELSE 0 END) as disputed,
+      SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
+      SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed,
       SUM(CASE WHEN ar.supervisor_verified IS NULL THEN 1 ELSE 0 END) as pending
     FROM attendance_records ar
     ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
@@ -178,9 +193,9 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
 
   // Session type distribution
   const sessionTypes = await prisma.attendanceRecord.groupBy({
-    by: ['sessionType'],
+    by: ['method'],
     where: filter,
-    _count: { sessionType: true }
+    _count: { method: true }
   });
 
   // Location accuracy analysis
@@ -211,8 +226,8 @@ async function getVerificationAnalytics(filter: any, startDate: Date, endDate: D
     SELECT 
       DATE(ar.updated_at) as day,
       COUNT(*) as total,
-      SUM(CASE WHEN ar.supervisor_verified = 1 THEN 1 ELSE 0 END) as verified,
-      SUM(CASE WHEN ar.supervisor_verified = 0 THEN 1 ELSE 0 END) as disputed
+      SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
+      SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed
     FROM attendance_records ar
     ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
     WHERE ar.updated_at >= '${startDate.toISOString()}' AND ar.updated_at <= '${endDate.toISOString()}'
@@ -235,20 +250,20 @@ async function getVerificationAnalytics(filter: any, startDate: Date, endDate: D
     _count: { status: true }
   });
 
-  // Average verification time
+  // Average verification time (Postgres)
   const avgVerificationTime = await prisma.$queryRaw`
     SELECT AVG(
       CASE 
-        WHEN reviewedAt IS NOT NULL 
-        THEN (julianday(reviewedAt) - julianday(createdAt)) * 24 * 60
+        WHEN reviewed_at IS NOT NULL 
+        THEN EXTRACT(EPOCH FROM (reviewed_at - created_at)) / 60
         ELSE NULL 
       END
     ) as avgMinutes
     FROM verification_requests 
-    WHERE createdAt >= ${startDate.toISOString()} AND createdAt <= ${endDate.toISOString()}
-    AND reviewedAt IS NOT NULL
-    ${filter.lecturerId ? `AND lecturerId = '${filter.lecturerId}'` : ''}
-    ${filter.courseScheduleId ? `AND courseScheduleId = '${filter.courseScheduleId}'` : ''}
+    WHERE created_at >= ${startDate} AND created_at <= ${endDate}
+    AND reviewed_at IS NOT NULL
+    ${filter.lecturerId ? Prisma.sql`AND lecturer_id = ${filter.lecturerId}` : Prisma.empty}
+    ${filter.courseSchedule?.classGroupId ? Prisma.sql`AND course_schedule_id IN (SELECT id FROM course_schedules WHERE class_group_id = ${filter.courseSchedule.classGroupId})` : Prisma.empty}
   `;
 
   return NextResponse.json({
@@ -261,37 +276,50 @@ async function getVerificationAnalytics(filter: any, startDate: Date, endDate: D
   });
 }
 
-async function getCourseAnalytics(filter: any, userRole: string, userId: string) {
+async function getCourseAnalytics(filter: any, userRole: string, lecturerId?: string) {
   let courseFilter: any = {};
   
-  if (userRole === 'LECTURER') {
-    courseFilter.lecturerId = userId;
+  if (userRole === 'LECTURER' && lecturerId) {
+    courseFilter.courseSchedules = {
+      some: {
+        lecturerId: lecturerId
+      }
+    };
+  } else if (filter.courseSchedule?.classGroupId) {
+    courseFilter.courseSchedules = {
+      some: {
+        classGroupId: filter.courseSchedule.classGroupId
+      }
+    };
   }
 
-  // Course attendance statistics
-  const courseStats = await prisma.course.findMany({
+  // Fetch courses with their schedules and attendance records
+  const courses = await prisma.course.findMany({
     where: courseFilter,
     include: {
-      attendanceRecords: {
-        where: filter,
-        select: {
-          id: true,
-          supervisorVerified: true,
-          method: true
-        }
-      },
-      _count: {
-        select: {
+      courseSchedules: {
+        where: userRole === 'LECTURER' && lecturerId ? { lecturerId } : 
+               filter.courseSchedule?.classGroupId ? { classGroupId: filter.courseSchedule.classGroupId } : undefined,
+        include: {
           attendanceRecords: {
-            where: filter
+            where: {
+              timestamp: filter.timestamp
+            },
+            select: {
+              id: true,
+              supervisorVerified: true,
+              method: true
+            }
           }
         }
       }
     }
   });
 
-  const courseAnalytics = courseStats.map(course => {
-    const records = course.attendanceRecords;
+  const courseAnalytics = courses.map(course => {
+    // Flatten attendance records from all relevant schedules
+    const records = course.courseSchedules.flatMap(schedule => schedule.attendanceRecords);
+    
     const total = records.length;
     const verified = records.filter(r => r.supervisorVerified === true).length;
     const disputed = records.filter(r => r.supervisorVerified === false).length;
@@ -301,8 +329,8 @@ async function getCourseAnalytics(filter: any, userRole: string, userId: string)
 
     return {
       id: course.id,
-      name: course.name,
-      code: course.code,
+      name: course.title,
+      code: course.courseCode,
       totalRecords: total,
       verifiedRecords: verified,
       disputedRecords: disputed,

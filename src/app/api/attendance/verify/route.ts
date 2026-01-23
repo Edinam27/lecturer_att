@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized - Only supervisors can verify attendance' }, { status: 401 })
+    if (!session?.user?.id || !['SUPERVISOR', 'ADMIN', 'CLASS_REP'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized - Only supervisors and class reps can verify attendance' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         supervisorComment: true,
         courseSchedule: {
           select: {
+            classGroupId: true, // Needed for Class Rep check
             course: {
               select: {
                 title: true
@@ -62,9 +63,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Attendance record not found' }, { status: 404 })
     }
 
+    // Check if Class Rep is authorized for this record
+    if (session.user.role === 'CLASS_REP') {
+      const classRepGroup = await prisma.classGroup.findFirst({
+        where: { classRepId: session.user.id }
+      })
+      
+      if (!classRepGroup || classRepGroup.id !== attendanceRecord.courseSchedule.classGroupId) {
+        return NextResponse.json({ error: 'Unauthorized - You can only verify attendance for your own class' }, { status: 403 })
+      }
+    }
+
     // Check if already verified
     if (attendanceRecord.supervisorVerified !== null) {
-      return NextResponse.json({ error: 'Attendance already verified by supervisor' }, { status: 400 })
+      return NextResponse.json({ error: 'Attendance already verified' }, { status: 400 })
     }
 
     // Update the attendance record with verification
@@ -129,15 +141,30 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
+    if (!session?.user?.id || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN' && session.user.role !== 'CLASS_REP')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const whereClause: any = {
+      supervisorVerified: null // Only unverified records
+    }
+
+    // Filter for Class Reps
+    if (session.user.role === 'CLASS_REP') {
+      const classGroups = await prisma.classGroup.findMany({
+        where: { classRepId: session.user.id },
+        select: { id: true }
+      })
+      const classGroupIds = classGroups.map(cg => cg.id)
+      
+      whereClause.courseSchedule = {
+        classGroupId: { in: classGroupIds }
+      }
     }
 
     // Get pending attendance records for verification
     const pendingRecords = await prisma.attendanceRecord.findMany({
-      where: {
-        supervisorVerified: null // Only unverified records
-      },
+      where: whereClause,
       select: {
         id: true,
         timestamp: true,

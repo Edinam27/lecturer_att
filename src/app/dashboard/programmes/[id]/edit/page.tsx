@@ -8,7 +8,6 @@ import Link from 'next/link'
 interface Programme {
   id: string
   name: string
-  code: string
   level: string
   duration: number
   description: string | null
@@ -21,7 +20,6 @@ interface Programme {
 
 interface FormData {
   name: string
-  code: string
   level: string
   duration: number
   description: string
@@ -39,7 +37,6 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    code: '',
     level: 'BACHELOR',
     duration: 4,
     description: '',
@@ -97,7 +94,6 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
       setProgramme(programmeData)
       setFormData({
         name: programmeData.name,
-        code: programmeData.code,
         level: programmeData.level,
         duration: programmeData.duration,
         description: programmeData.description || '',
@@ -254,7 +250,7 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
           )}
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="sm:col-span-1">
+            <div className="sm:col-span-2">
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                 Programme Name *
               </label>
@@ -267,22 +263,6 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
                 required
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="e.g., Computer Science"
-              />
-            </div>
-
-            <div className="sm:col-span-1">
-              <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
-                Programme Code *
-              </label>
-              <input
-                type="text"
-                id="code"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                required
-                className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="e.g., BSC-CS"
               />
             </div>
           </div>

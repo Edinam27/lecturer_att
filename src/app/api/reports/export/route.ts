@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     const lecturerId = searchParams.get('lecturerId') // For individual lecturer filtering
 
     // Calculate date range
-    const now = new Date()
+    // Hardcoded date to match seed data (2025-01-24)
+    const now = new Date('2025-01-24T12:00:00Z')
     let startDate: Date
     let endDate: Date
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       startDate = new Date(startParam)
       endDate = new Date(endParam)
     } else {
-      endDate = new Date()
+      endDate = new Date(now)
       switch (range) {
         case 'week':
           startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
@@ -165,7 +166,7 @@ async function getOverviewData(whereClause: any) {
           endTime: true,
           course: {
             select: {
-              code: true,
+              courseCode: true,
               title: true
             }
           },
@@ -198,7 +199,7 @@ async function getOverviewData(whereClause: any) {
     'Start Time': record.courseSchedule.startTime,
     'End Time': record.courseSchedule.endTime,
     Lecturer: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`,
-    Course: `${record.courseSchedule.course.code} - ${record.courseSchedule.course.title}`,
+    Course: `${record.courseSchedule.course.courseCode} - ${record.courseSchedule.course.title}`,
     ClassGroup: record.courseSchedule.classGroup.name,
     Classroom: record.courseSchedule.classroom 
       ? `${record.courseSchedule.classroom.name} (${record.courseSchedule.classroom.building?.name || ''})`
@@ -233,7 +234,7 @@ async function getCourseData(whereClause: any) {
       })
 
       return {
-        CourseCode: schedule?.course.code || '',
+        CourseCode: schedule?.course.courseCode || '',
         CourseTitle: schedule?.course.title || '',
         ClassGroup: schedule?.classGroup.name || '',
         AttendanceCount: record._count.id

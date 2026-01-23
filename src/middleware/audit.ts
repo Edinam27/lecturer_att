@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { headers } from 'next/headers'
 
 // Routes that should be audited
 const AUDITED_ROUTES = [
@@ -134,7 +133,7 @@ export async function auditMiddleware(request: NextRequest) {
     }
     
     // Get request details
-    const headersList = headers()
+    const headersList = request.headers
     const ipAddress = headersList.get('x-forwarded-for') || 
                      headersList.get('x-real-ip') || 
                      request.ip || 
