@@ -1,14 +1,20 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { redirect } from 'next/navigation';
 import MobileAttendanceRecorder from '@/components/mobile/MobileAttendanceRecorder';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#2563eb',
+};
+
 export const metadata: Metadata = {
   title: 'Mobile Attendance | UPSA Attendance',
   description: 'Mobile-optimized attendance recording for lecturers on-the-go',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
-  themeColor: '#2563eb',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

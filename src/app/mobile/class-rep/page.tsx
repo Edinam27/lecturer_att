@@ -1,14 +1,20 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { redirect } from 'next/navigation';
 import ClassRepMobileDashboard from '@/components/mobile/ClassRepMobileDashboard';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#2563eb',
+};
+
 export const metadata: Metadata = {
   title: 'Class Rep Mobile Dashboard | UPSA Attendance',
   description: 'Mobile-optimized dashboard for class representatives to verify attendance on-the-go',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
-  themeColor: '#2563eb',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
