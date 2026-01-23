@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth-config'
-import { auditService } from '@/lib/audit'
+import { getToken } from 'next-auth/jwt'
 import { headers } from 'next/headers'
 
 // Routes that should be audited
@@ -129,9 +127,9 @@ export async function auditMiddleware(request: NextRequest) {
   }
   
   try {
-    // Get session
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    // Get session token
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (!token?.sub) {
       return NextResponse.next()
     }
     
@@ -148,13 +146,14 @@ export async function auditMiddleware(request: NextRequest) {
     const targetId = pathSegments[pathSegments.length - 1] || 'unknown'
     
     // Calculate risk score
-    const riskScore = calculateRiskScore(action, method, pathname, session.user.role)
+    // Cast token.role to string as it might be unknown type
+    const riskScore = calculateRiskScore(action, method, pathname, (token.role as string) || 'unknown')
     
     // Prepare metadata
     const metadata = {
       method,
       pathname,
-      userRole: session.user.role,
+      userRole: token.role,
       timestamp: new Date().toISOString(),
       requestHeaders: {
         'user-agent': userAgent,
@@ -164,18 +163,26 @@ export async function auditMiddleware(request: NextRequest) {
     }
     
     // Create audit log (fire and forget to avoid blocking the request)
-    auditService.createAuditLog({
-      userId: session.user.id,
-      action,
-      targetType: getTargetType(pathname),
-      targetId,
-      metadata,
-      ipAddress,
-      userAgent,
-      sessionId: session.user.id, // Use user ID as session identifier
-      riskScore
+    // Send to internal API instead of calling service directly to avoid Prisma usage in Edge Middleware
+    fetch(`${request.nextUrl.origin}/api/internal/audit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // Propagate auth cookie if needed, but token is already verified
+        },
+        body: JSON.stringify({
+            userId: token.sub,
+            action,
+            targetType: getTargetType(pathname),
+            targetId,
+            metadata,
+            ipAddress,
+            userAgent,
+            sessionId: token.sub,
+            riskScore
+        })
     }).catch(error => {
-      console.error('Failed to create audit log:', error)
+      console.error('Failed to send audit log to internal API:', error)
     })
     
   } catch (error) {

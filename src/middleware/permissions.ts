@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth-config'
+import { getToken } from 'next-auth/jwt'
 import { Permission, hasPermission, checkResourcePermission } from '@/lib/permissions'
 import { UserRole } from '@prisma/client'
-import { prisma } from '@/lib/db'
 
 // Permission middleware configuration
 interface PermissionConfig {
@@ -21,21 +19,22 @@ export function createPermissionMiddleware(config: PermissionConfig) {
   return async function permissionMiddleware(request: NextRequest) {
     try {
       // Get session
-      const session = await getServerSession(authOptions)
+      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
       
-      if (!session?.user?.id) {
+      if (!token?.sub) {
         return NextResponse.json(
           { error: 'Authentication required' },
           { status: 401 }
         )
       }
 
-      const userRole = session.user.role as UserRole
-      const userId = session.user.id
+      const userRole = token.role as UserRole
+      const userId = token.sub
 
       // If custom check is provided, use it
       if (config.customCheck) {
-        const hasAccess = await config.customCheck(session, request)
+        // Warning: customCheck cannot use Prisma if running in Edge Middleware
+        const hasAccess = await config.customCheck(token, request)
         if (!hasAccess) {
           return NextResponse.json(
             { error: 'Access denied' },
@@ -68,6 +67,12 @@ export function createPermissionMiddleware(config: PermissionConfig) {
         if (config.checkOwnership || config.checkClassMembership) {
           const resourceId = extractResourceId(request.url)
           
+          // NOTE: DB-based ownership checks are moved to API routes because Prisma is not supported in Edge Middleware
+          // For now, we assume the API route will perform the final validation.
+          // This middleware only checks RBAC (Role Based Access Control).
+          
+          /* 
+          // Original logic - Disabled for Edge Compatibility
           if (config.checkOwnership) {
             isOwner = await checkResourceOwnership(
               config.resourceType,
@@ -85,6 +90,7 @@ export function createPermissionMiddleware(config: PermissionConfig) {
               userRole
             )
           }
+          */
         }
 
         const hasResourcePermission = checkResourcePermission(
@@ -93,6 +99,7 @@ export function createPermissionMiddleware(config: PermissionConfig) {
           config.action,
           { isOwner, isClassMember }
         )
+
 
         if (!hasResourcePermission) {
           return NextResponse.json(
@@ -135,6 +142,9 @@ async function checkResourceOwnership(
   userId: string,
   userRole: UserRole
 ): Promise<boolean> {
+  // Disabled for Edge Compatibility
+  return false
+  /*
   if (!resourceId) return false
 
   try {
@@ -182,6 +192,7 @@ async function checkResourceOwnership(
   }
 
   return false
+  */
 }
 
 // Check if user is a member of the class related to the resource
@@ -191,6 +202,9 @@ async function checkClassMembership(
   userId: string,
   userRole: UserRole
 ): Promise<boolean> {
+  // Disabled for Edge Compatibility
+  return false
+  /*
   if (!resourceId || userRole !== UserRole.CLASS_REP) return false
 
   try {
@@ -238,6 +252,7 @@ async function checkClassMembership(
   }
 
   return false
+  */
 }
 
 // Predefined middleware configurations for common use cases
