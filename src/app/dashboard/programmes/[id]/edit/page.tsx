@@ -12,6 +12,7 @@ interface Programme {
   level: string
   duration: number
   description: string | null
+  coordinator: string | null
   _count: {
     courses: number
     classGroups: number
@@ -24,6 +25,7 @@ interface FormData {
   level: string
   duration: number
   description: string
+  coordinatorId: string
 }
 
 export default function EditProgrammePage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +33,7 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
   const router = useRouter()
   const resolvedParams = use(params)
   const [programme, setProgramme] = useState<Programme | null>(null)
+  const [coordinators, setCoordinators] = useState<{id: string, firstName: string, lastName: string}[]>([])
   const [loading, setLoading] = useState(false)
   const [fetchLoading, setFetchLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +42,8 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
     code: '',
     level: 'BACHELOR',
     duration: 4,
-    description: ''
+    description: '',
+    coordinatorId: ''
   })
 
   useEffect(() => {
@@ -50,18 +54,40 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
       return
     }
     
-    if (session.user.role !== 'ADMIN') {
+    // Allow ADMIN and COORDINATOR (validation happens in fetchProgramme)
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'COORDINATOR') {
       router.push('/dashboard')
       return
+    }
+
+    if (session.user.role === 'ADMIN') {
+      fetchCoordinators()
     }
 
     fetchProgramme()
   }, [session, status, router, resolvedParams.id])
 
+  const fetchCoordinators = async () => {
+    try {
+      const response = await fetch('/api/users')
+      if (response.ok) {
+        const users = await response.json()
+        const coords = users.filter((u: any) => u.role === 'COORDINATOR')
+        setCoordinators(coords)
+      }
+    } catch (err) {
+      console.error('Failed to fetch coordinators', err)
+    }
+  }
+
   const fetchProgramme = async () => {
     try {
       setFetchLoading(true)
       const response = await fetch(`/api/programmes/${resolvedParams.id}`)
+
+      if (response.status === 403) {
+        throw new Error('Access denied. You are not authorized to edit this programme.')
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch programme details')
@@ -74,7 +100,8 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
         code: programmeData.code,
         level: programmeData.level,
         duration: programmeData.duration,
-        description: programmeData.description || ''
+        description: programmeData.description || '',
+        coordinatorId: programmeData.coordinator || ''
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch programme')
@@ -298,6 +325,31 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
               />
             </div>
           </div>
+
+          {session?.user.role === 'ADMIN' && (
+            <div className="mt-6">
+              <label htmlFor="coordinatorId" className="block text-sm font-medium text-gray-700 mb-1">
+                Programme Coordinator
+              </label>
+              <select
+                id="coordinatorId"
+                name="coordinatorId"
+                value={formData.coordinatorId}
+                onChange={handleChange}
+                className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">-- Select Coordinator --</option>
+                {coordinators.map(coord => (
+                  <option key={coord.id} value={coord.id}>
+                    {coord.firstName} {coord.lastName}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Assigning a coordinator gives them authority over lecturers, courses, and schedules for this programme.
+              </p>
+            </div>
+          )}
 
           <div className="mt-6">
             <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">

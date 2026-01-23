@@ -37,20 +37,20 @@ export default function PWAProvider({ children }: PWAProviderProps) {
     // Initialize PWA service
     const initializePWA = async () => {
       try {
-        const isProd = process.env.NODE_ENV === 'production'
+        // const isProd = process.env.NODE_ENV === 'production'
 
-        // Register service worker only on https or localhost and only in production
-        const canRegister = isProd && typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+        // Register service worker only on https or localhost (allow dev mode)
+        const canRegister = typeof window !== 'undefined' && 'serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost');
         if (canRegister) {
           await pwaService.registerServiceWorker();
         } else {
-          console.log('Skipping SW registration (dev or insecure/unsupported context)');
+          console.log('Skipping SW registration (insecure/unsupported context)');
         }
 
-        // Request notification permission only in production
-        if (isProd) {
+        // Request notification permission
+        // if (isProd) {
           await pwaService.requestNotificationPermission();
-        }
+        // }
 
         // Set initial states
         setIsOnlineState(isOnline());

@@ -4,6 +4,11 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 
 interface Schedule {
   id: string
@@ -57,6 +62,13 @@ export default function SchedulesPage() {
   const [loading, setLoading] = useState(true)
   const [dayFilter, setDayFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  
+  // Switch Lecturer Modal State
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false)
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
+  const [lecturers, setLecturers] = useState<any[]>([])
+  const [newLecturerId, setNewLecturerId] = useState<string>('')
+  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -66,13 +78,80 @@ export default function SchedulesPage() {
       return
     }
     
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'LECTURER') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'LECTURER' && session.user.role !== 'COORDINATOR') {
       router.push('/dashboard')
       return
     }
 
     fetchSchedules()
   }, [session, status, router])
+
+  const fetchLecturers = async () => {
+    if (lecturers.length > 0) return
+    try {
+      const response = await fetch('/api/lecturers')
+      if (response.ok) {
+        const data = await response.json()
+        setLecturers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching lecturers:', error)
+      toast.error('Failed to load lecturers')
+    }
+  }
+
+  const handleOpenSwitchModal = (schedule: Schedule) => {
+    setSelectedSchedule(schedule)
+    setNewLecturerId(schedule.lecturer.id)
+    setIsSwitchModalOpen(true)
+    fetchLecturers()
+  }
+
+  const handleSwitchLecturer = async () => {
+    if (!selectedSchedule || !newLecturerId) return
+    
+    setSwitching(true)
+    try {
+      // Use the existing schedule update endpoint
+      // We need to fetch the full schedule first to get other fields, OR the API might support partial updates (PATCH).
+      // But based on EditSchedulePage, it's a PUT with all fields.
+      // So we fetch the schedule details first to preserve other fields.
+      
+      const scheduleRes = await fetch(`/api/schedules/${selectedSchedule.id}`)
+      if (!scheduleRes.ok) throw new Error('Failed to fetch schedule details')
+      const scheduleData = await scheduleRes.json()
+
+      const response = await fetch(`/api/schedules/${selectedSchedule.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: scheduleData.course.id,
+          classGroupId: scheduleData.classGroup.id,
+          lecturerId: parseInt(newLecturerId),
+          classroomId: scheduleData.classroom.id,
+          dayOfWeek: scheduleData.dayOfWeek,
+          startTime: scheduleData.startTime,
+          endTime: scheduleData.endTime,
+          sessionType: scheduleData.sessionType,
+          isActive: scheduleData.isActive
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Lecturer switched successfully')
+        setIsSwitchModalOpen(false)
+        fetchSchedules()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to switch lecturer')
+      }
+    } catch (error) {
+      console.error('Error switching lecturer:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to switch lecturer')
+    } finally {
+      setSwitching(false)
+    }
+  }
 
   const fetchSchedules = async () => {
     try {
@@ -96,7 +175,7 @@ export default function SchedulesPage() {
     )
   }
 
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'LECTURER')) {
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'LECTURER' && session.user.role !== 'COORDINATOR')) {
     return null
   }
 
@@ -267,6 +346,14 @@ export default function SchedulesPage() {
                     >
                       Edit
                     </Link>
+                    {(session?.user.role === 'ADMIN' || session?.user.role === 'COORDINATOR') && (
+                      <button
+                        onClick={() => handleOpenSwitchModal(schedule)}
+                        className="text-orange-600 hover:text-orange-900 text-sm font-medium ml-2"
+                      >
+                        Switch Lecturer
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -317,6 +404,55 @@ export default function SchedulesPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isSwitchModalOpen} onOpenChange={setIsSwitchModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Switch Lecturer</DialogTitle>
+            <DialogDescription>
+              Assign a new lecturer to this schedule. This will update all future sessions.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {selectedSchedule && (
+              <div className="mb-2 p-2 bg-slate-50 rounded text-sm">
+                <p><strong>Course:</strong> {selectedSchedule.course.code} - {selectedSchedule.course.name}</p>
+                <p><strong>Current Lecturer:</strong> {selectedSchedule.lecturer.firstName} {selectedSchedule.lecturer.lastName}</p>
+                <p><strong>Time:</strong> {selectedSchedule.startTime} - {selectedSchedule.endTime}</p>
+              </div>
+            )}
+            
+            <div className="grid gap-2">
+              <Label htmlFor="lecturer">New Lecturer</Label>
+              <Select
+                value={newLecturerId}
+                onValueChange={setNewLecturerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a lecturer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lecturers.map((l) => (
+                    <SelectItem key={l.id} value={l.id.toString()}>
+                      {l.user.firstName} {l.user.lastName} ({l.user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSwitchModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSwitchLecturer} disabled={switching}>
+              {switching ? 'Switching...' : 'Switch Lecturer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

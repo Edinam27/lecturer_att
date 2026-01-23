@@ -54,19 +54,47 @@ export async function GET(request: NextRequest) {
 
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        timestamp: true,
+        locationVerified: true,
+        method: true,
+        supervisorVerified: true,
+        supervisorComment: true,
+        gpsLatitude: true,
+        gpsLongitude: true,
         lecturer: {
-          include: {
-            user: true
+          select: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true
+              }
+            }
           }
         },
         courseSchedule: {
-          include: {
-            course: true,
-            classGroup: true,
+          select: {
+            sessionType: true,
+            course: {
+              select: {
+                title: true,
+                courseCode: true
+              }
+            },
+            classGroup: {
+              select: {
+                name: true
+              }
+            },
             classroom: {
-              include: {
-                building: true
+              select: {
+                name: true,
+                building: {
+                  select: {
+                    name: true
+                  }
+                }
               }
             }
           }
@@ -100,8 +128,8 @@ export async function GET(request: NextRequest) {
       },
       locationVerified: record.locationVerified,
       method: record.method,
-      classRepVerified: record.classRepVerified,
-      classRepComment: record.classRepComment,
+      supervisorVerified: record.supervisorVerified,
+      supervisorComment: record.supervisorComment,
       gpsLatitude: record.gpsLatitude,
       gpsLongitude: record.gpsLongitude
     }))

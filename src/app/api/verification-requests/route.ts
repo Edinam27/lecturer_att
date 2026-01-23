@@ -29,32 +29,25 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || session.user.role !== 'CLASS_REP') {
-      return NextResponse.json({ error: 'Unauthorized - Only class representatives can create verification requests' }, { status: 401 })
+    if (!session?.user?.id || session.user.role !== 'SUPERVISOR') {
+      return NextResponse.json({ error: 'Unauthorized - Only supervisors can create verification requests' }, { status: 401 })
     }
 
     const body = await request.json()
     const { attendanceRecordId, evidenceUrls, verificationNotes, studentAttendanceData } = createVerificationRequestSchema.parse(body)
 
-    // Get class rep's class groups
+    // Get supervisor's info
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { classGroupsAsRep: true }
+      where: { id: session.user.id }
     })
     
-    if (!user?.classGroupsAsRep || user.classGroupsAsRep.length === 0) {
-      return NextResponse.json({ error: 'Class group not found' }, { status: 404 })
-    }
-
-    // Get the attendance record and verify it belongs to class rep's class
+    // In future, we might restrict supervisors to specific departments/faculties
+    // For now, any supervisor can verify any record
+    
+    // Get the attendance record
     const attendanceRecord = await prisma.attendanceRecord.findFirst({
       where: {
-        id: attendanceRecordId,
-        courseSchedule: {
-          classGroupId: {
-            in: user.classGroupsAsRep.map(group => group.id)
-          }
-        }
+        id: attendanceRecordId
       },
       include: {
         courseSchedule: {
@@ -72,7 +65,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!attendanceRecord) {
-      return NextResponse.json({ error: 'Attendance record not found or unauthorized' }, { status: 404 })
+      return NextResponse.json({ error: 'Attendance record not found' }, { status: 404 })
     }
 
     // Check if verification request already exists
@@ -90,12 +83,11 @@ export async function POST(request: NextRequest) {
     const verificationRequest = await prisma.verificationRequest.create({
       data: {
         attendanceRecordId,
-        classRepId: session.user.id,
+        requesterId: session.user.id,
         status: 'pending',
-        evidenceUrls: evidenceUrls ? JSON.stringify(evidenceUrls) : null,
-        verificationNotes,
-        studentAttendanceData: studentAttendanceData ? JSON.stringify(studentAttendanceData) : null,
-        submittedAt: new Date()
+        evidence: evidenceUrls ? JSON.stringify(evidenceUrls) : null,
+        description: verificationNotes || 'Verification Request',
+        createdAt: new Date()
       }
     })
 
@@ -105,7 +97,7 @@ export async function POST(request: NextRequest) {
         userId: attendanceRecord.courseSchedule.lecturer.userId,
         type: 'verification_request',
         title: 'Attendance Verification Request',
-        message: `Class representative has submitted a verification request for your ${attendanceRecord.courseSchedule.course.title} session`,
+        message: `Supervisor has submitted a verification request for your ${attendanceRecord.courseSchedule.course.title} session`,
         data: JSON.stringify({
           verificationRequestId: verificationRequest.id,
           attendanceRecordId,
@@ -141,7 +133,7 @@ export async function POST(request: NextRequest) {
       verificationRequest: {
         id: verificationRequest.id,
         status: verificationRequest.status,
-        submittedAt: verificationRequest.submittedAt
+        submittedAt: verificationRequest.createdAt
       }
     })
   } catch (error) {
@@ -168,11 +160,11 @@ export async function GET(request: NextRequest) {
 
     let verificationRequests
 
-    if (role === 'CLASS_REP') {
-      // Get verification requests created by this class rep
+    if (role === 'SUPERVISOR') {
+      // Get verification requests created by this supervisor
       verificationRequests = await prisma.verificationRequest.findMany({
         where: {
-          classRepId: session.user.id,
+          requesterId: session.user.id,
           ...(status && { status: status as any })
         },
         include: {
@@ -191,7 +183,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          classRep: {
+          requester: {
             select: {
               id: true,
               firstName: true,
@@ -201,7 +193,7 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: {
-          submittedAt: 'desc'
+          createdAt: 'desc'
         }
       })
     } else if (role === 'LECTURER') {
@@ -232,7 +224,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          classRep: {
+          requester: {
             select: {
               id: true,
               firstName: true,
@@ -267,7 +259,7 @@ export async function GET(request: NextRequest) {
               }
             }
           },
-          classRep: {
+          requester: {
             select: {
               id: true,
               firstName: true,
@@ -309,9 +301,9 @@ export async function GET(request: NextRequest) {
           employeeId: request.attendanceRecord.courseSchedule.lecturer.employeeId
         }
       },
-      classRep: {
-        name: `${request.classRep.firstName} ${request.classRep.lastName}`,
-        email: request.classRep.email
+      requester: {
+        name: `${request.requester.firstName} ${request.requester.lastName}`,
+        email: request.requester.email
       }
     }))
 
@@ -356,7 +348,7 @@ export async function PUT(request: NextRequest) {
             }
           }
         },
-        classRep: true
+        requester: true
       }
     })
 
@@ -367,10 +359,10 @@ export async function PUT(request: NextRequest) {
     // Check authorization
     const userRole = session.user.role
     const isLecturer = userRole === 'LECTURER' && verificationRequest.attendanceRecord.courseSchedule.lecturer.userId === session.user.id
-    const isClassRep = userRole === 'CLASS_REP' && verificationRequest.classRepId === session.user.id
+    const isRequester = verificationRequest.requesterId === session.user.id
     const isAdminOrCoordinator = ['ADMIN', 'ACADEMIC_COORDINATOR'].includes(userRole)
 
-    if (!isLecturer && !isClassRep && !isAdminOrCoordinator) {
+    if (!isLecturer && !isRequester && !isAdminOrCoordinator) {
       return NextResponse.json({ error: 'Unauthorized to update this verification request' }, { status: 403 })
     }
 
@@ -385,36 +377,40 @@ export async function PUT(request: NextRequest) {
       }
     })
 
-    // Update attendance record if approved
-    if (status === 'approved') {
-      await prisma.attendanceRecord.update({
-        where: { id: verificationRequest.attendanceRecordId },
-        data: {
-          classRepVerified: true,
-          classRepComment: reviewNotes || 'Verified through detailed verification request'
-        }
-      })
+    // If approved, update the attendance record
+    if (status === 'approved' && !escalate) {
+      if (verificationRequest.attendanceRecordId) {
+        await prisma.attendanceRecord.update({
+          where: { id: verificationRequest.attendanceRecordId },
+          data: {
+            supervisorVerified: true, // Auto-verify if request approved
+            supervisorComment: `Verified via request: ${reviewNotes || 'Approved by lecturer'}`
+          }
+        })
+      }
     } else if (status === 'rejected') {
-      await prisma.attendanceRecord.update({
-        where: { id: verificationRequest.attendanceRecordId },
-        data: {
-          classRepVerified: false,
-          classRepComment: reviewNotes || 'Rejected through verification request'
-        }
-      })
+      if (verificationRequest.attendanceRecordId) {
+        await prisma.attendanceRecord.update({
+          where: { id: verificationRequest.attendanceRecordId },
+          data: {
+            supervisorVerified: false,
+            supervisorComment: `Rejected via request: ${reviewNotes || 'Rejected by lecturer'}`
+          }
+        })
+      }
     }
 
     // Create notifications
     const notificationTargets = []
     
     if (isLecturer) {
-      // Notify class rep
+      // Notify requester (Supervisor)
       notificationTargets.push({
-        userId: verificationRequest.classRepId,
+        userId: verificationRequest.requesterId,
         title: `Verification Request ${status.charAt(0).toUpperCase() + status.slice(1)}`,
         message: `Your verification request for ${verificationRequest.attendanceRecord.courseSchedule.course.title} has been ${status}`
       })
-    } else if (isClassRep || isAdminOrCoordinator) {
+    } else if (isRequester || isAdminOrCoordinator) {
       // Notify lecturer
       notificationTargets.push({
         userId: verificationRequest.attendanceRecord.courseSchedule.lecturer.userId,

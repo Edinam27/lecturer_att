@@ -10,8 +10,8 @@ interface PrintableAttendanceRecord {
   locationVerified: boolean
   gpsLatitude?: number | null
   gpsLongitude?: number | null
-  classRepVerified?: boolean | null
-  classRepComment?: string | null
+  supervisorVerified?: boolean | null
+  supervisorComment?: string | null
   course: { title: string; courseCode: string }
   classGroup: { name: string }
   building: { name: string }
@@ -68,9 +68,9 @@ export default function PrintAttendancePage() {
 
   const dateStr = new Date(record.timestamp).toLocaleDateString()
   const timeStr = new Date(record.timestamp).toLocaleTimeString()
-  const statusLabel = record.classRepVerified === true
+  const statusLabel = record.supervisorVerified === true
     ? 'Verified'
-    : record.classRepVerified === false
+    : record.supervisorVerified === false
       ? 'Disputed'
       : 'Pending'
 

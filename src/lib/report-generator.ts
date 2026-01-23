@@ -50,7 +50,7 @@ const generateAttendanceOverview = async (parameters: ReportParameters) => {
   const whereClause: any = {}
   
   if (dateRange) {
-    whereClause.date = {
+    whereClause.timestamp = {
       gte: new Date(dateRange.startDate),
       lte: new Date(dateRange.endDate)
     }
@@ -73,11 +73,14 @@ const generateAttendanceOverview = async (parameters: ReportParameters) => {
     }
   }
 
-  const attendanceRecords = await prisma.attendanceRecord.findMany({
+  const rawAttendanceRecords = await prisma.attendanceRecord.findMany({
     where: whereClause,
-    include: {
+    select: {
+      id: true,
+      timestamp: true,
+      supervisorVerified: true,
       lecturer: {
-        include: {
+        select: {
           user: {
             select: {
               firstName: true,
@@ -88,7 +91,7 @@ const generateAttendanceOverview = async (parameters: ReportParameters) => {
         }
       },
       courseSchedule: {
-        include: {
+        select: {
           course: {
             select: {
               title: true,
@@ -97,26 +100,27 @@ const generateAttendanceOverview = async (parameters: ReportParameters) => {
           },
           classGroup: {
             select: {
-              name: true
-            }
-          }
-        }
-      },
-      verifications: {
-        include: {
-          verifiedBy: {
-            select: {
-              firstName: true,
-              lastName: true
+              name: true,
+              studentCount: true
             }
           }
         }
       }
     },
     orderBy: {
-      date: 'desc'
+      timestamp: 'desc'
     }
   })
+
+  // Transform records to match expected structure
+  const attendanceRecords = rawAttendanceRecords.map(r => ({
+    ...r,
+    date: r.timestamp,
+    status: r.supervisorVerified === true ? 'verified' : r.supervisorVerified === false ? 'disputed' : 'pending',
+    studentsPresent: 0,
+    totalStudents: r.courseSchedule.classGroup.studentCount || 0,
+    verifications: []
+  }))
 
   // Calculate statistics
   const totalRecords = attendanceRecords.length
@@ -196,7 +200,7 @@ const generateLecturerPerformance = async (parameters: ReportParameters) => {
   const whereClause: any = {}
   
   if (dateRange) {
-    whereClause.date = {
+    whereClause.timestamp = {
       gte: new Date(dateRange.startDate),
       lte: new Date(dateRange.endDate)
     }
@@ -208,7 +212,8 @@ const generateLecturerPerformance = async (parameters: ReportParameters) => {
 
   const lecturers = await prisma.lecturer.findMany({
     where: lecturerId ? { id: lecturerId } : {},
-    include: {
+    select: {
+      id: true,
       user: {
         select: {
           firstName: true,
@@ -218,13 +223,20 @@ const generateLecturerPerformance = async (parameters: ReportParameters) => {
       },
       attendanceRecords: {
         where: whereClause,
-        include: {
+        select: {
+          timestamp: true,
+          supervisorVerified: true,
           courseSchedule: {
-            include: {
+            select: {
               course: {
                 select: {
                   title: true,
                   courseCode: true
+                }
+              },
+              classGroup: {
+                select: {
+                  studentCount: true
                 }
               }
             }
@@ -235,7 +247,12 @@ const generateLecturerPerformance = async (parameters: ReportParameters) => {
   })
 
   const lecturerPerformance = lecturers.map(lecturer => {
-    const records = lecturer.attendanceRecords
+    const records = lecturer.attendanceRecords.map(r => ({
+      ...r,
+      status: r.supervisorVerified === true ? 'verified' : r.supervisorVerified === false ? 'disputed' : 'pending',
+      studentsPresent: 0,
+      totalStudents: r.courseSchedule.classGroup.studentCount || 0
+    }))
     const totalRecords = records.length
     const verifiedRecords = records.filter(r => r.status === 'verified').length
     const pendingRecords = records.filter(r => r.status === 'pending').length

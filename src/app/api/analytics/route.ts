@@ -94,13 +94,13 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
   const [totalRecords, verifiedRecords, pendingRecords, disputedRecords] = await Promise.all([
     prisma.attendanceRecord.count({ where: filter }),
     prisma.attendanceRecord.count({ 
-      where: { ...filter, classRepVerified: true } 
+      where: { ...filter, supervisorVerified: true } 
     }),
     prisma.attendanceRecord.count({ 
-      where: { ...filter, classRepVerified: null } 
+      where: { ...filter, supervisorVerified: null } 
     }),
     prisma.attendanceRecord.count({ 
-      where: { ...filter, classRepVerified: false } 
+      where: { ...filter, supervisorVerified: false } 
     })
   ]);
 
@@ -112,7 +112,11 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
     where: filter,
     orderBy: { timestamp: 'desc' },
     take: 10,
-    include: {
+    select: {
+      id: true,
+      timestamp: true,
+      supervisorVerified: true,
+      method: true,
       lecturer: { 
         select: { 
           user: {
@@ -147,8 +151,8 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
       lecturer: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`,
       classGroup: record.courseSchedule.classGroup.name,
       date: record.timestamp,
-      status: record.classRepVerified === null ? 'pending' : 
-              record.classRepVerified ? 'verified' : 'disputed',
+      status: record.supervisorVerified === null ? 'pending' : 
+              record.supervisorVerified ? 'verified' : 'disputed',
       sessionType: record.method
     }))
   });
@@ -160,9 +164,9 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
     SELECT 
       DATE(ar.timestamp) as day,
       COUNT(*) as total,
-      SUM(CASE WHEN ar.class_rep_verified = 1 THEN 1 ELSE 0 END) as verified,
-      SUM(CASE WHEN ar.class_rep_verified = 0 THEN 1 ELSE 0 END) as disputed,
-      SUM(CASE WHEN ar.class_rep_verified IS NULL THEN 1 ELSE 0 END) as pending
+      SUM(CASE WHEN ar.supervisor_verified = 1 THEN 1 ELSE 0 END) as verified,
+      SUM(CASE WHEN ar.supervisor_verified = 0 THEN 1 ELSE 0 END) as disputed,
+      SUM(CASE WHEN ar.supervisor_verified IS NULL THEN 1 ELSE 0 END) as pending
     FROM attendance_records ar
     ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
     WHERE ar.timestamp >= '${startDate.toISOString()}' AND ar.timestamp <= '${endDate.toISOString()}'
@@ -190,8 +194,8 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
   return NextResponse.json({
     dailyTrends,
     sessionTypes: sessionTypes.map(st => ({
-      type: st.sessionType,
-      count: st._count.sessionType
+      type: st.method,
+      count: st._count.method
     })),
     locationAccuracy: {
       distribution: locationAccuracy,
@@ -207,12 +211,12 @@ async function getVerificationAnalytics(filter: any, startDate: Date, endDate: D
     SELECT 
       DATE(ar.updated_at) as day,
       COUNT(*) as total,
-      SUM(CASE WHEN ar.class_rep_verified = 1 THEN 1 ELSE 0 END) as verified,
-      SUM(CASE WHEN ar.class_rep_verified = 0 THEN 1 ELSE 0 END) as disputed
+      SUM(CASE WHEN ar.supervisor_verified = 1 THEN 1 ELSE 0 END) as verified,
+      SUM(CASE WHEN ar.supervisor_verified = 0 THEN 1 ELSE 0 END) as disputed
     FROM attendance_records ar
     ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
     WHERE ar.updated_at >= '${startDate.toISOString()}' AND ar.updated_at <= '${endDate.toISOString()}'
-    AND ar.class_rep_verified IS NOT NULL
+    AND ar.supervisor_verified IS NOT NULL
     ${filter.lecturerId ? `AND ar.lecturer_id = '${filter.lecturerId}'` : ''}
     ${filter.courseSchedule?.classGroupId ? `AND cs.class_group_id = '${filter.courseSchedule.classGroupId}'` : ''}
     GROUP BY DATE(ar.updated_at)
@@ -272,8 +276,8 @@ async function getCourseAnalytics(filter: any, userRole: string, userId: string)
         where: filter,
         select: {
           id: true,
-          classRepVerified: true,
-          sessionType: true
+          supervisorVerified: true,
+          method: true
         }
       },
       _count: {
@@ -289,11 +293,11 @@ async function getCourseAnalytics(filter: any, userRole: string, userId: string)
   const courseAnalytics = courseStats.map(course => {
     const records = course.attendanceRecords;
     const total = records.length;
-    const verified = records.filter(r => r.classRepVerified === true).length;
-    const disputed = records.filter(r => r.classRepVerified === false).length;
-    const pending = records.filter(r => r.classRepVerified === null).length;
-    const virtualSessions = records.filter(r => r.sessionType === 'VIRTUAL').length;
-    const physicalSessions = records.filter(r => r.sessionType === 'PHYSICAL').length;
+    const verified = records.filter(r => r.supervisorVerified === true).length;
+    const disputed = records.filter(r => r.supervisorVerified === false).length;
+    const pending = records.filter(r => r.supervisorVerified === null).length;
+    const virtualSessions = records.filter(r => r.method === 'virtual').length;
+    const physicalSessions = records.filter(r => r.method === 'onsite').length;
 
     return {
       id: course.id,

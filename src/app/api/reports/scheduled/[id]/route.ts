@@ -25,8 +25,9 @@ const updateScheduledReportSchema = z.object({
 // GET /api/reports/scheduled/[id] - Get a specific scheduled report
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     
@@ -77,8 +78,9 @@ export async function GET(
 // PUT /api/reports/scheduled/[id] - Update a scheduled report
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     
@@ -162,8 +164,9 @@ export async function PUT(
 // DELETE /api/reports/scheduled/[id] - Delete a scheduled report
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     

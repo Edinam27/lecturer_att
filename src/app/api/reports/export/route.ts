@@ -140,19 +140,48 @@ export async function GET(request: NextRequest) {
 async function getOverviewData(whereClause: any) {
   const records = await prisma.attendanceRecord.findMany({
     where: whereClause,
-    include: {
+    select: {
+      timestamp: true,
+      supervisorVerified: true,
+      sessionStartTime: true,
+      sessionEndTime: true,
+      method: true,
+      gpsLatitude: true,
+      gpsLongitude: true,
+      remarks: true,
       lecturer: {
-        include: {
-          user: true
+        select: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
         }
       },
       courseSchedule: {
-        include: {
-          course: true,
-          classGroup: true,
+        select: {
+          startTime: true,
+          endTime: true,
+          course: {
+            select: {
+              code: true,
+              title: true
+            }
+          },
+          classGroup: {
+            select: {
+              name: true
+            }
+          },
           classroom: {
-            include: {
-              building: true
+            select: {
+              name: true,
+              building: {
+                select: {
+                  name: true
+                }
+              }
             }
           }
         }
@@ -166,15 +195,21 @@ async function getOverviewData(whereClause: any) {
   return records.map(record => ({
     Date: record.timestamp.toLocaleDateString(),
     Time: record.timestamp.toLocaleTimeString(),
+    'Start Time': record.courseSchedule.startTime,
+    'End Time': record.courseSchedule.endTime,
     Lecturer: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`,
     Course: `${record.courseSchedule.course.code} - ${record.courseSchedule.course.title}`,
     ClassGroup: record.courseSchedule.classGroup.name,
-    Classroom: `${record.courseSchedule.classroom?.name || 'N/A'} (${record.courseSchedule.classroom?.building?.name || 'N/A'})`,
-    Status: record.classRepVerified === true ? 'Verified' : record.classRepVerified === false ? 'Disputed' : 'Pending',
-    CheckIn: record.checkInTime?.toLocaleTimeString() || 'N/A',
-    CheckOut: record.checkOutTime?.toLocaleTimeString() || 'N/A',
-    Location: record.location || 'N/A',
-    Remarks: record.remarks || 'N/A'
+    Classroom: record.courseSchedule.classroom 
+      ? `${record.courseSchedule.classroom.name} (${record.courseSchedule.classroom.building?.name || ''})`
+      : '',
+    Status: record.supervisorVerified === true ? 'Verified' : record.supervisorVerified === false ? 'Disputed' : 'Pending',
+    CheckIn: record.sessionStartTime ? record.sessionStartTime.toLocaleTimeString() : record.timestamp.toLocaleTimeString(),
+    CheckOut: record.sessionEndTime ? record.sessionEndTime.toLocaleTimeString() : '',
+    Location: record.method === 'virtual' 
+      ? 'Virtual' 
+      : `${record.courseSchedule.classroom?.name || 'Onsite'}${record.gpsLatitude ? ` (GPS: ${record.gpsLatitude.toFixed(4)}, ${record.gpsLongitude?.toFixed(4)})` : ''}`,
+    Remarks: record.remarks || ''
   }))
 }
 
@@ -198,9 +233,9 @@ async function getCourseData(whereClause: any) {
       })
 
       return {
-        CourseCode: schedule?.course.code || 'N/A',
-        CourseTitle: schedule?.course.title || 'N/A',
-        ClassGroup: schedule?.classGroup.name || 'N/A',
+        CourseCode: schedule?.course.code || '',
+        CourseTitle: schedule?.course.title || '',
+        ClassGroup: schedule?.classGroup.name || '',
         AttendanceCount: record._count.id
       }
     })
@@ -228,8 +263,8 @@ async function getLecturerData(whereClause: any) {
       })
 
       return {
-        LecturerName: `${lecturer?.user.firstName || 'N/A'} ${lecturer?.user.lastName || ''}`,
-        Email: lecturer?.user.email || 'N/A',
+        LecturerName: `${lecturer?.user.firstName || ''} ${lecturer?.user.lastName || ''}`.trim() || '',
+        Email: lecturer?.user.email || '',
         AttendanceCount: record._count.id
       }
     })

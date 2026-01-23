@@ -30,7 +30,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       where: {
         courseId: resolvedParams.id
       },
-      include: {
+      select: {
+        id: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        sessionType: true,
+        classroomId: true,
         lecturer: {
           select: {
             id: true,
@@ -51,7 +57,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           }
         },
         classroom: {
-          include: {
+          select: {
+            name: true,
             building: {
               select: {
                 name: true

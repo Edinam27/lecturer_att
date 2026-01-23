@@ -14,41 +14,43 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || session.user.role !== 'CLASS_REP') {
-      return NextResponse.json({ error: 'Unauthorized - Only class representatives can verify attendance' }, { status: 401 })
+    if (!session?.user?.id || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
+      return NextResponse.json({ error: 'Unauthorized - Only supervisors can verify attendance' }, { status: 401 })
     }
 
     const body = await request.json()
     const { attendanceRecordId, verified, comment } = verifyAttendanceSchema.parse(body)
 
-    // Get class rep's class groups
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { classGroupsAsRep: true }
-    })
-    
-    if (!user?.classGroupsAsRep || user.classGroupsAsRep.length === 0) {
-      return NextResponse.json({ error: 'Class group not found' }, { status: 404 })
-    }
-
-    // Get the attendance record and verify it belongs to class rep's class
-    const attendanceRecord = await prisma.attendanceRecord.findFirst({
+    // Get the attendance record
+    const attendanceRecord = await prisma.attendanceRecord.findUnique({
       where: {
-        id: attendanceRecordId,
-        courseSchedule: {
-          classGroupId: {
-            in: user.classGroupsAsRep.map(group => group.id)
-          }
-        }
+        id: attendanceRecordId
       },
-      include: {
+      select: {
+        id: true,
+        timestamp: true,
+        supervisorVerified: true,
+        supervisorComment: true,
         courseSchedule: {
-          include: {
-            course: true,
-            classGroup: true,
+          select: {
+            course: {
+              select: {
+                title: true
+              }
+            },
+            classGroup: {
+              select: {
+                name: true
+              }
+            },
             lecturer: {
-              include: {
-                user: true
+              select: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
               }
             }
           }
@@ -57,20 +59,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (!attendanceRecord) {
-      return NextResponse.json({ error: 'Attendance record not found or unauthorized' }, { status: 404 })
+      return NextResponse.json({ error: 'Attendance record not found' }, { status: 404 })
     }
 
     // Check if already verified
-    if (attendanceRecord.classRepVerified !== null) {
-      return NextResponse.json({ error: 'Attendance already verified by class representative' }, { status: 400 })
+    if (attendanceRecord.supervisorVerified !== null) {
+      return NextResponse.json({ error: 'Attendance already verified by supervisor' }, { status: 400 })
     }
 
     // Update the attendance record with verification
     const updatedRecord = await prisma.attendanceRecord.update({
       where: { id: attendanceRecordId },
       data: {
-        classRepVerified: verified,
-        classRepComment: comment || null
+        supervisorVerified: verified,
+        supervisorComment: comment || null
       }
     })
 
@@ -97,8 +99,8 @@ export async function POST(request: NextRequest) {
       message: `Attendance ${verified ? 'verified' : 'disputed'} successfully`,
       record: {
         id: updatedRecord.id,
-        classRepVerified: updatedRecord.classRepVerified,
-        classRepComment: updatedRecord.classRepComment,
+        supervisorVerified: updatedRecord.supervisorVerified,
+        supervisorComment: updatedRecord.supervisorComment,
         lecturer: `${attendanceRecord.courseSchedule.lecturer.user.firstName} ${attendanceRecord.courseSchedule.lecturer.user.lastName}`,
         course: attendanceRecord.courseSchedule.course.title,
         classGroup: attendanceRecord.courseSchedule.classGroup.name,
@@ -122,48 +124,60 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to fetch pending verifications for class rep
+// GET endpoint to fetch pending verifications for supervisor
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || session.user.role !== 'CLASS_REP') {
+    if (!session?.user?.id || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get class rep's class groups
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { classGroupsAsRep: true }
-    })
-    
-    if (!user?.classGroupsAsRep || user.classGroupsAsRep.length === 0) {
-      return NextResponse.json({ error: 'Class group not found' }, { status: 404 })
     }
 
     // Get pending attendance records for verification
     const pendingRecords = await prisma.attendanceRecord.findMany({
       where: {
-        courseSchedule: {
-          classGroupId: {
-            in: user.classGroupsAsRep.map(group => group.id)
-          }
-        },
-        classRepVerified: null // Only unverified records
+        supervisorVerified: null // Only unverified records
       },
-      include: {
-        lecturer: {
-          include: {
-            user: true
+      select: {
+        id: true,
+        timestamp: true,
+        locationVerified: true,
+        method: true,
+        gpsLatitude: true,
+        gpsLongitude: true,
+        courseSchedule: {
+          select: {
+            sessionType: true,
+            course: {
+              select: {
+                title: true,
+                courseCode: true
+              }
+            },
+            classGroup: {
+              select: {
+                name: true
+              }
+            },
+            classroom: {
+              select: {
+                name: true,
+                building: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
           }
         },
-        courseSchedule: {
-          include: {
-            course: true,
-            classGroup: true,
-            classroom: {
-              include: {
-                building: true
+        lecturer: {
+          select: {
+            employeeId: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true
               }
             }
           }

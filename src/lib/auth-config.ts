@@ -3,11 +3,62 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/db'
 import { verifyPassword } from '@/lib/auth'
 import { UserRole } from '@prisma/client'
+import jwt from 'jsonwebtoken'
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
+      id: 'impersonation',
+      name: 'Impersonation',
+      credentials: {
+        token: { label: "Token", type: "text" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.token) return null
+
+        try {
+          const secret = process.env.NEXTAUTH_SECRET
+          if (!secret) {
+            console.error("NEXTAUTH_SECRET missing in authorize")
+            return null
+          }
+
+          const payload = jwt.verify(credentials.token, secret) as any
+          console.log("Impersonation token verified for user:", payload.targetUserId)
+          
+          if (payload.type !== 'impersonation' || !payload.targetUserId) {
+            console.error("Invalid impersonation payload", payload)
+            return null
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { id: payload.targetUserId },
+            include: {
+              lecturer: true
+            }
+          })
+
+          if (!user || !user.isActive) {
+            console.error("Impersonation target user not found or inactive")
+            return null
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            role: user.role,
+            lecturerId: user.lecturer?.id
+          }
+        } catch (error) {
+          console.error('Impersonation auth error:', error)
+          return null
+        }
+      }
+    }),
+    CredentialsProvider({
+      id: 'credentials',
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -53,6 +104,7 @@ export const authOptions: NextAuthOptions = {
       }
     })
   ],
+  debug: true,
   session: {
     strategy: 'jwt' as const
   },

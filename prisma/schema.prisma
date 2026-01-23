@@ -76,6 +76,8 @@ model Lecturer {
   qualifications String?        // JSON string
   isVerified     Boolean        @default(false) @map("is_verified")
   verificationDate DateTime?    @map("verification_date")
+  isAdjunct      Boolean        @default(false) @map("is_adjunct")
+  isOverload     Boolean        @default(false) @map("is_overload")
 
   // Relations
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -198,6 +200,7 @@ model CourseSchedule {
   endTime      String      @map("end_time")   // HH:MM format
   classroomId  String?     @map("classroom_id")
   sessionType  SessionType @map("session_type")
+  isOverload   Boolean     @default(false) @map("is_overload")
 
   // Relations
   course            Course             @relation(fields: [courseId], references: [id])
@@ -221,8 +224,9 @@ model AttendanceRecord {
   locationVerified   Boolean   @map("location_verified")
   locationAccuracy   Float?    @map("location_accuracy")
   method             String    // "onsite" or "virtual"
-  classRepVerified   Boolean?  @map("class_rep_verified")
-  classRepComment    String?   @map("class_rep_comment")
+  supervisorVerified Boolean?  @map("supervisor_verified")
+  supervisorComment  String?   @map("supervisor_comment")
+  remarks            String?
   
   // Virtual session tracking fields
   sessionStartTime   DateTime? @map("session_start_time")

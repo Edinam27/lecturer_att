@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
 
@@ -56,8 +57,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       locationVerified: record.locationVerified,
       gpsLatitude: record.gpsLatitude,
       gpsLongitude: record.gpsLongitude,
-      classRepVerified: record.classRepVerified,
-      classRepComment: record.classRepComment,
+      supervisorVerified: record.supervisorVerified,
+      supervisorComment: record.supervisorComment,
       course: {
         title: record.courseSchedule.course.title,
         courseCode: record.courseSchedule.course.courseCode

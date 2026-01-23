@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { getUPSACoordinates, getUPSARadius, getDistance } from '@/lib/geolocation'
 
 interface Schedule {
   id: string
@@ -34,6 +35,7 @@ export default function TakeAttendancePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [distanceToCampus, setDistanceToCampus] = useState<number | null>(null)
   const [locationError, setLocationError] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -41,6 +43,7 @@ export default function TakeAttendancePage() {
   const [virtualSessionActive, setVirtualSessionActive] = useState(false)
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<string>('')
+  const [remarks, setRemarks] = useState('')
 
   useEffect(() => {
     if (session?.user.role !== 'LECTURER') {
@@ -98,10 +101,16 @@ export default function TakeAttendancePage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocation({
+        const userCoords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude
-        })
+        }
+        setLocation(userCoords)
+        
+        // Calculate distance to campus
+        const campusCoords = getUPSACoordinates()
+        const distance = getDistance(userCoords, campusCoords)
+        setDistanceToCampus(distance)
       },
       (error) => {
         switch (error.code) {
@@ -141,7 +150,8 @@ export default function TakeAttendancePage() {
         body: JSON.stringify({
           scheduleId: selectedSchedule.id,
           method: 'virtual',
-          action: 'start'
+          action: 'start',
+          remarks
         })
       })
 
@@ -176,7 +186,8 @@ export default function TakeAttendancePage() {
         body: JSON.stringify({
           scheduleId: selectedSchedule.id,
           method: 'virtual',
-          action: 'end'
+          action: 'end',
+          remarks
         })
       })
 
@@ -211,7 +222,8 @@ export default function TakeAttendancePage() {
     try {
       const requestBody: any = {
         scheduleId: selectedSchedule.id,
-        method: attendanceMethod
+        method: attendanceMethod,
+        remarks
       }
 
       if (attendanceMethod === 'onsite') {
@@ -380,7 +392,7 @@ export default function TakeAttendancePage() {
                         <button
                           onClick={handleStartVirtualSession}
                           disabled={submitting}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-md shadow-sm text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600 disabled:opacity-50"
                         >
                           {submitting ? (
                             <>
@@ -416,7 +428,7 @@ export default function TakeAttendancePage() {
                         <button
                           onClick={handleEndVirtualSession}
                           disabled={submitting}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-md shadow-sm text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600 disabled:opacity-50"
                         >
                           {submitting ? (
                             <>
@@ -450,7 +462,7 @@ export default function TakeAttendancePage() {
                         </p>
                         <button
                           onClick={getCurrentLocation}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-bold rounded-md shadow-sm text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
                         >
                           <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -464,19 +476,57 @@ export default function TakeAttendancePage() {
                       </div>
                     ) : (
                       <div>
-                        <div className="flex items-center text-green-600 mb-4">
+                        <div className={`flex items-center mb-4 ${distanceToCampus && distanceToCampus <= getUPSARadius() ? 'text-green-600' : 'text-amber-600'}`}>
                           <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            {distanceToCampus && distanceToCampus <= getUPSARadius() ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            )}
                           </svg>
-                          <span className="text-sm font-medium">Location verified</span>
+                          <span className="text-sm font-medium">
+                            {distanceToCampus && distanceToCampus <= getUPSARadius() 
+                              ? 'Location Verified (Within Campus)' 
+                              : `Location Warning: ${distanceToCampus}m away (Max: ${getUPSARadius()}m)`}
+                          </span>
                         </div>
+                        
+                        {distanceToCampus && distanceToCampus > getUPSARadius() && (
+                          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+                            You appear to be outside the allowed campus radius. You may still try to record attendance, but it might be flagged or rejected depending on system settings.
+                            <br />
+                            <button 
+                              onClick={getCurrentLocation}
+                              className="mt-3 inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                              <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Retry Location Check
+                            </button>
+                          </div>
+                        )}
+
                         <p className="text-sm text-gray-600 mb-4">
                           Latitude: {location.latitude.toFixed(6)}, Longitude: {location.longitude.toFixed(6)}
                         </p>
+                        <div className="mb-4">
+                          <label htmlFor="onsite-remarks" className="block text-sm font-medium text-gray-700 mb-1">
+                            Remarks (Optional)
+                          </label>
+                          <textarea
+                            id="onsite-remarks"
+                            rows={3}
+                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            placeholder="Enter any remarks (e.g. Room Change, Class Rep comments)..."
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                          />
+                        </div>
                         <button
                           onClick={handleTakeAttendance}
                           disabled={submitting}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                          className="w-full inline-flex justify-center items-center px-6 py-4 border border-transparent text-lg font-bold rounded-lg shadow-md hover:shadow-lg transition-all text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {submitting ? (
                             <>

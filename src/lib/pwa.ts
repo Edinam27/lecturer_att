@@ -83,11 +83,13 @@ export class PWAService {
     }
 
     // Skip registration in development to avoid invalid state errors
+    /*
     const isProd = process.env.NODE_ENV === 'production';
     if (!isProd) {
       console.log('Skipping Service Worker registration: development mode');
       return null;
     }
+    */
 
     // Only register on secure contexts (https) or localhost
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';

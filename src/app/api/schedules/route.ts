@@ -28,6 +28,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Authorization check for Coordinator
+    if (session.user.role === 'COORDINATOR') {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: { programme: true }
+      })
+      
+      if (!course || course.programme.coordinator !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden - You can only create schedules for courses in your assigned programmes' }, { status: 403 })
+      }
+    }
+
     // Check for scheduling conflicts
     const conflictingSchedule = await prisma.courseSchedule.findFirst({
       where: {
@@ -99,21 +111,53 @@ export async function POST(request: NextRequest) {
         endTime,
         sessionType
       },
-      include: {
+      select: {
+        id: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        sessionType: true,
         course: {
-          include: {
-            programme: true
+          select: {
+            id: true,
+            courseCode: true,
+            title: true,
+            creditHours: true,
+            programme: {
+              select: {
+                name: true,
+                level: true
+              }
+            }
           }
         },
-        classGroup: true,
+        classGroup: {
+          select: {
+            id: true,
+            name: true,
+            admissionYear: true
+          }
+        },
         lecturer: {
-          include: {
-            user: true
+          select: {
+            id: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            }
           }
         },
         classroom: {
-          include: {
-            building: true
+          select: {
+            name: true,
+            building: {
+              select: {
+                name: true
+              }
+            }
           }
         }
       }
@@ -127,7 +171,6 @@ export async function POST(request: NextRequest) {
       sessionType: schedule.sessionType,
       venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
       isActive: true,
-      createdAt: schedule.createdAt,
       course: {
         id: schedule.course.id,
         code: schedule.course.courseCode,
@@ -165,12 +208,13 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.id || !['ADMIN', 'LECTURER'].includes(session.user.role)) {
+    if (!session?.user?.id || !['ADMIN', 'LECTURER', 'COORDINATOR'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // For lecturers, only show their own schedules
-    let whereClause = {}
+    let whereClause: any = {}
+    
     if (session.user.role === 'LECTURER') {
       const lecturer = await prisma.lecturer.findUnique({
         where: { userId: session.user.id }
@@ -181,25 +225,71 @@ export async function GET(request: NextRequest) {
       }
       
       whereClause = { lecturerId: lecturer.id }
+    } else if (session.user.role === 'COORDINATOR') {
+      // Find programmes where this user is coordinator
+      const programmes = await prisma.programme.findMany({
+        where: { coordinator: session.user.id },
+        select: { id: true }
+      })
+      
+      const programmeIds = programmes.map(p => p.id)
+      
+      whereClause = {
+        course: {
+          programmeId: { in: programmeIds }
+        }
+      }
     }
 
     const schedules = await prisma.courseSchedule.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        sessionType: true,
         course: {
-          include: {
-            programme: true
+          select: {
+            id: true,
+            courseCode: true,
+            title: true,
+            creditHours: true,
+            programme: {
+              select: {
+                name: true,
+                level: true
+              }
+            }
           }
         },
-        classGroup: true,
+        classGroup: {
+          select: {
+            id: true,
+            name: true,
+            admissionYear: true
+          }
+        },
         lecturer: {
-          include: {
-            user: true
+          select: {
+            id: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            }
           }
         },
         classroom: {
-          include: {
-            building: true
+          select: {
+            name: true,
+            building: {
+              select: {
+                name: true
+              }
+            }
           }
         },
         _count: {
@@ -222,7 +312,6 @@ export async function GET(request: NextRequest) {
       sessionType: schedule.sessionType,
       venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
       isActive: true, // Default to active, can be updated based on business logic
-      createdAt: schedule.createdAt,
       course: {
         id: schedule.course.id,
         code: schedule.course.courseCode,

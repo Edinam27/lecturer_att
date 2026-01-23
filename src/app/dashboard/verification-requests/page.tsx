@@ -8,7 +8,7 @@ import Image from 'next/image'
 interface VerificationRequest {
   id: string
   status: 'pending' | 'approved' | 'rejected' | 'disputed'
-  submittedAt: string
+  createdAt: string
   reviewedAt?: string
   escalatedAt?: string
   verificationNotes?: string
@@ -38,13 +38,14 @@ interface VerificationRequest {
       employeeId: string
     }
   }
-  classRep: {
-    name: string
+  requester: {
+    firstName: string
+    lastName: string
     email: string
   }
 }
 
-interface PendingAttendanceRecord {
+export interface PendingAttendanceRecord {
   id: string
   timestamp: string
   sessionType: string
@@ -96,7 +97,7 @@ export default function VerificationRequestsPage() {
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session || !['CLASS_REP', 'LECTURER', 'ADMIN', 'ACADEMIC_COORDINATOR'].includes(session.user.role)) {
+    if (!session || !['SUPERVISOR', 'LECTURER', 'ADMIN', 'ACADEMIC_COORDINATOR'].includes(session.user.role)) {
       router.push('/dashboard')
       return
     }
@@ -107,7 +108,7 @@ export default function VerificationRequestsPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      if (activeTab === 'pending' && session?.user.role === 'CLASS_REP') {
+      if (activeTab === 'pending' && session?.user.role === 'SUPERVISOR') {
         // Fetch pending attendance records for verification
         const response = await fetch('/api/attendance/verify')
         if (response.ok) {
@@ -296,7 +297,7 @@ export default function VerificationRequestsPage() {
       </div>
 
       {/* Tab Navigation */}
-      {session?.user.role === 'CLASS_REP' && (
+      {session?.user.role === 'SUPERVISOR' && (
         <div className="mb-6">
           <nav className="flex space-x-8">
             <button
@@ -324,7 +325,7 @@ export default function VerificationRequestsPage() {
       )}
 
       {/* Pending Records Tab */}
-      {activeTab === 'pending' && session?.user.role === 'CLASS_REP' && (
+      {activeTab === 'pending' && session?.user.role === 'SUPERVISOR' && (
         <div className="bg-white rounded-lg shadow border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-medium text-gray-900">
@@ -609,13 +610,13 @@ export default function VerificationRequestsPage() {
                           <p className="text-xs text-gray-500">ID: {request.attendanceRecord.lecturer.employeeId}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Class Rep</p>
-                          <p className="text-sm text-gray-900">{request.classRep.name}</p>
-                          <p className="text-xs text-gray-500">{request.classRep.email}</p>
+                          <p className="text-sm font-medium text-gray-700">Requester</p>
+                          <p className="text-sm text-gray-900">{request.requester.firstName} {request.requester.lastName}</p>
+                          <p className="text-xs text-gray-500">{request.requester.email}</p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-700">Submitted</p>
-                          <p className="text-sm text-gray-900">{formatDateTime(request.submittedAt)}</p>
+                          <p className="text-sm text-gray-900">{formatDateTime(request.createdAt)}</p>
                           {request.reviewedAt && (
                             <p className="text-xs text-gray-500">Reviewed: {formatDateTime(request.reviewedAt)}</p>
                           )}

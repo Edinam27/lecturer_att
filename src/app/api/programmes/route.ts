@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
     const body = await request.json()
-    const { name, level, durationSemesters, description, deliveryModes } = body
+    const { name, level, durationSemesters, description, deliveryModes, coordinatorId } = body
 
     // Check if programme already exists
     const existingProgramme = await prisma.programme.findFirst({
@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
         level,
         durationSemesters,
         description,
-        deliveryModes
+        deliveryModes,
+        coordinator: coordinatorId || null
       },
       include: {
         _count: {

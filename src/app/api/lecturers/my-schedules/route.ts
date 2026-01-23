@@ -29,13 +29,17 @@ export async function GET(request: NextRequest) {
     const schedules = await prisma.courseSchedule.findMany({
       where: {
         lecturerId: userId,
-        isActive: true
       },
-      include: {
+      select: {
+        id: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        sessionType: true,
         course: {
           select: {
             id: true,
-            code: true,
+            courseCode: true,
             title: true,
             programme: {
               select: {
@@ -55,34 +59,15 @@ export async function GET(request: NextRequest) {
                 name: true,
                 level: true
               }
-            },
-            students: {
-              select: {
-                id: true,
-                email: true,
-                studentId: true,
-                profile: {
-                  select: {
-                    firstName: true,
-                    lastName: true,
-                    phoneNumber: true
-                  }
-                }
-              },
-              orderBy: {
-                profile: {
-                  firstName: 'asc'
-                }
-              }
             }
           }
         },
         lecturer: {
           select: {
             id: true,
-            email: true,
-            profile: {
+            user: {
               select: {
+                email: true,
                 firstName: true,
                 lastName: true
               }
@@ -121,12 +106,11 @@ export async function GET(request: NextRequest) {
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
-      venue: `${schedule.classroom.building.name} - ${schedule.classroom.name}`,
-      isActive: schedule.isActive,
-      createdAt: schedule.createdAt,
+      venue: schedule.classroom ? `${schedule.classroom.building.name} - ${schedule.classroom.name}` : 'Virtual',
+      isActive: true,
       course: {
         id: schedule.course.id,
-        code: schedule.course.code,
+        code: schedule.course.courseCode,
         name: schedule.course.title,
         programme: {
           name: schedule.course.programme.name,
@@ -140,21 +124,19 @@ export async function GET(request: NextRequest) {
         programme: {
           name: schedule.classGroup.programme.name,
           level: schedule.classGroup.programme.level
-        },
-        students: schedule.classGroup.students
+        }
       },
       lecturer: {
         id: schedule.lecturer.id,
-        email: schedule.lecturer.email,
-        name: `${schedule.lecturer.profile?.firstName || ''} ${schedule.lecturer.profile?.lastName || ''}`.trim(),
-        profile: schedule.lecturer.profile
+        email: schedule.lecturer.user.email,
+        name: `${schedule.lecturer.user.firstName} ${schedule.lecturer.user.lastName}`,
       },
-      classroom: {
+      classroom: schedule.classroom ? {
         id: schedule.classroom.id,
         name: schedule.classroom.name,
         capacity: schedule.classroom.capacity,
         building: schedule.classroom.building
-      },
+      } : null,
       attendanceCount: schedule._count.attendanceRecords
     }));
 

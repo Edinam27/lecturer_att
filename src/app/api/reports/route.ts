@@ -72,21 +72,21 @@ export async function GET(request: NextRequest) {
     const verifiedRecords = await prisma.attendanceRecord.count({
       where: {
         ...whereClause,
-        classRepVerified: true
+        supervisorVerified: true
       }
     })
 
     const disputedRecords = await prisma.attendanceRecord.count({
       where: {
         ...whereClause,
-        classRepVerified: false
+        supervisorVerified: false
       }
     })
 
     const pendingRecords = await prisma.attendanceRecord.count({
       where: {
         ...whereClause,
-        classRepVerified: null
+        supervisorVerified: null
       }
     })
 

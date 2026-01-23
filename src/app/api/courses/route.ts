@@ -11,7 +11,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    let whereClause: any = {}
+    
+    // Coordinators can only view courses in their programmes
+    if (session.user.role === 'COORDINATOR') {
+      whereClause = {
+        programme: {
+          coordinator: session.user.id
+        }
+      }
+    }
+
     const courses = await prisma.course.findMany({
+      where: whereClause,
       include: {
         programme: {
           select: {
@@ -35,11 +47,11 @@ export async function GET(request: NextRequest) {
       id: course.id,
       courseCode: course.courseCode,
       title: course.title,
-      credits: course.credits,
-      semester: course.semester,
+      credits: course.creditHours,
+      semester: course.semesterLevel,
       isElective: course.isElective,
       description: course.description,
-      createdAt: course.createdAt,
+      // createdAt: course.createdAt, // Removed as it might not exist in schema
       programme: course.programme,
       _count: course._count
     }))
@@ -65,6 +77,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { courseCode, title, credits, semester, isElective, description, programmeId } = body
 
+    // Authorization check for Coordinator
+    if (session.user.role === 'COORDINATOR') {
+      const programme = await prisma.programme.findUnique({ where: { id: programmeId } })
+      if (!programme || programme.coordinator !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden - You can only add courses to your assigned programmes' }, { status: 403 })
+      }
+    }
+
     // Check if course already exists
     const existingCourse = await prisma.course.findFirst({
       where: {
@@ -81,13 +101,20 @@ export async function POST(request: NextRequest) {
       data: {
         courseCode,
         title,
-        credits,
-        semester,
+        creditHours: credits,
+        semesterLevel: semester,
         isElective,
         description,
         programmeId
       },
-      include: {
+      select: {
+        id: true,
+        courseCode: true,
+        title: true,
+        creditHours: true,
+        semesterLevel: true,
+        isElective: true,
+        description: true,
         programme: {
           select: {
             id: true,
@@ -97,8 +124,7 @@ export async function POST(request: NextRequest) {
         },
         _count: {
           select: {
-            schedules: true,
-            classGroups: true
+            courseSchedules: true
           }
         }
       }

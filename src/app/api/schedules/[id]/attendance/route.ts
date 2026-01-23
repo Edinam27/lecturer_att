@@ -5,8 +5,9 @@ import { prisma } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions);
     
@@ -28,23 +29,20 @@ export async function GET(
       );
     }
 
-    const scheduleId = parseInt(params.id);
+    const scheduleId = params.id;
     
-    if (isNaN(scheduleId)) {
-      return NextResponse.json(
-        { error: 'Invalid schedule ID' },
-        { status: 400 }
-      );
-    }
-
     // For lecturers, verify they own this schedule
     if (userRole === 'LECTURER') {
+      const lecturer = await prisma.lecturer.findUnique({
+        where: { userId: userId }
+      });
+
       const schedule = await prisma.courseSchedule.findUnique({
         where: { id: scheduleId },
         select: { lecturerId: true }
       });
 
-      if (!schedule || schedule.lecturerId !== userId) {
+      if (!schedule || !lecturer || schedule.lecturerId !== lecturer.id) {
         return NextResponse.json(
           { error: 'Forbidden' },
           { status: 403 }
@@ -104,8 +102,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions);
     
@@ -127,16 +126,13 @@ export async function POST(
       );
     }
 
-    const scheduleId = parseInt(params.id);
+    const scheduleId = params.id;
     
-    if (isNaN(scheduleId)) {
-      return NextResponse.json(
-        { error: 'Invalid schedule ID' },
-        { status: 400 }
-      );
-    }
-
     // Verify lecturer owns this schedule
+    const lecturer = await prisma.lecturer.findUnique({
+        where: { userId: userId }
+    });
+
     const schedule = await prisma.courseSchedule.findUnique({
       where: { id: scheduleId },
       include: {
@@ -148,7 +144,7 @@ export async function POST(
       }
     });
 
-    if (!schedule || schedule.lecturerId !== userId) {
+    if (!schedule || !lecturer || schedule.lecturerId !== lecturer.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

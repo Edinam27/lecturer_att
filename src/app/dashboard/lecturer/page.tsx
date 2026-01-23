@@ -41,11 +41,26 @@ const lecturerCards: DashboardCard[] = [
     href: '/dashboard/courses',
     color: 'bg-yellow-500',
     icon: 'book-open'
+  },
+  {
+    title: 'Claim Form',
+    description: 'Generate and print your claim form',
+    href: '/dashboard/reports/claim-form',
+    color: 'bg-indigo-500',
+    icon: 'printer'
   }
 ]
 
 const getIcon = (iconName: string) => {
   const icons: { [key: string]: JSX.Element } = {
+    printer: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+      />
+    ),
     'clipboard-check': (
       <path
         strokeLinecap="round"

@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             address: true,
-            latitude: true,
-            longitude: true
+            gpsLatitude: true,
+            gpsLongitude: true
           }
         }
       }
@@ -186,7 +186,11 @@ export async function POST(request: NextRequest) {
         equipment: classroom.equipment,
         isActive: classroom.isActive,
         createdAt: classroom.createdAt,
-        building: classroom.building
+        building: {
+          ...classroom.building,
+          latitude: classroom.building.gpsLatitude,
+          longitude: classroom.building.gpsLongitude
+        }
       }
     }, { status: 201 });
   } catch (error) {

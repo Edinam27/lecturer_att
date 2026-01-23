@@ -1,12 +1,19 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { UserRole } from '@prisma/client'
+import { Plus, Search, Edit2, UserX, UserCheck, Briefcase, Clock, AlertTriangle, ArrowRightLeft } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 
 interface Lecturer {
   id: string
+  userId: string
   user: {
     firstName: string
     lastName: string
@@ -19,7 +26,10 @@ interface Lecturer {
     department: string | null
     employmentType: string | null
     rank: string | null
+    isAdjunct: boolean
+    isOverload: boolean
     scheduleCount: number
+    overloadCount: number
   }
 }
 
@@ -29,11 +39,31 @@ export default function LecturersPage() {
   const [lecturers, setLecturers] = useState<Lecturer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Modal states
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [currentLecturer, setCurrentLecturer] = useState<Lecturer | null>(null)
+
+  // Form states
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    employeeId: '',
+    department: '',
+    rank: '',
+    isAdjunct: false,
+    isOverload: false,
+    isActive: true
+  })
 
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session?.user || session.user.role !== 'COORDINATOR') {
+    if (!session?.user || (session.user.role !== 'COORDINATOR' && session.user.role !== 'ADMIN')) {
       router.push('/dashboard')
       return
     }
@@ -59,6 +89,154 @@ export default function LecturersPage() {
     }
   }
 
+  const handleAddLecturer = async () => {
+    try {
+      const response = await fetch('/api/lecturers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add lecturer')
+      }
+
+      setIsAddOpen(false)
+      resetForm()
+      fetchLecturers()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
+  const handleEditLecturer = async () => {
+    if (!currentLecturer) return
+
+    try {
+      const response = await fetch(`/api/lecturers/${currentLecturer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            employeeId: formData.employeeId,
+            department: formData.department,
+            rank: formData.rank,
+            isAdjunct: formData.isAdjunct,
+            isOverload: formData.isOverload,
+            isActive: formData.isActive
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update lecturer')
+      }
+
+      setIsEditOpen(false)
+      setCurrentLecturer(null)
+      resetForm()
+      fetchLecturers()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
+  const handleToggleStatus = async (lecturer: Lecturer) => {
+    try {
+      const response = await fetch(`/api/lecturers/${lecturer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !lecturer.isActive })
+      })
+
+      if (!response.ok) throw new Error('Failed to update status')
+      
+      fetchLecturers()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
+  const handleSwitchUser = async (lecturer: Lecturer) => {
+    if (!confirm(`Are you sure you want to switch to ${lecturer.user.firstName} ${lecturer.user.lastName}?`)) {
+      return
+    }
+
+    try {
+      console.log('Initiating user switch to:', lecturer.userId)
+      const response = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: lecturer.userId })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate impersonation token')
+      }
+
+      const { token } = await response.json()
+      console.log('Impersonation token received, signing in...')
+      
+      const result = await signIn('impersonation', {
+        token,
+        redirect: false,
+        callbackUrl: '/dashboard'
+      })
+
+      if (result?.error) {
+        console.error('Sign in failed:', result.error)
+        throw new Error(result.error)
+      }
+
+      console.log('Switch successful, redirecting...')
+      window.location.href = '/dashboard'
+    } catch (err) {
+      console.error('Impersonation failed:', err)
+      alert('Failed to switch user. Please try again.')
+    }
+  }
+
+  const openEditModal = (lecturer: Lecturer) => {
+    setCurrentLecturer(lecturer)
+    setFormData({
+      firstName: lecturer.user.firstName,
+      lastName: lecturer.user.lastName,
+      email: lecturer.user.email,
+      password: '', // Password not editable here
+      employeeId: lecturer.lecturer.employeeId || '',
+      department: lecturer.lecturer.department || '',
+      rank: lecturer.lecturer.rank || '',
+      isAdjunct: lecturer.lecturer.isAdjunct,
+      isOverload: lecturer.lecturer.isOverload,
+      isActive: lecturer.isActive
+    })
+    setIsEditOpen(true)
+  }
+
+  const resetForm = () => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      employeeId: '',
+      department: '',
+      rank: '',
+      isAdjunct: false,
+      isOverload: false,
+      isActive: true
+    })
+  }
+
+  const filteredLecturers = lecturers.filter(lecturer => 
+    (lecturer.user.firstName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (lecturer.user.lastName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (lecturer.user.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (lecturer.lecturer.employeeId && lecturer.lecturer.employeeId.includes(searchQuery))
+  )
+
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,200 +245,273 @@ export default function LecturersPage() {
     )
   }
 
-  if (!session?.user || session.user.role !== 'COORDINATOR') {
-    return null
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="p-4 sm:p-6">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Lecturers</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          View and manage lecturers in your programmes
-        </p>
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Lecturers</h1>
+          <p className="text-sm text-gray-500">Manage lecturers, their status, and assignments</p>
+        </div>
+        <Button onClick={() => { resetForm(); setIsAddOpen(true) }} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="mr-2 h-4 w-4" /> Add Lecturer
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Lecturers</dt>
-                  <dd className="text-lg font-medium text-gray-900">{lecturers.length}</dd>
-                </dl>
-              </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              <Briefcase className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Total Lecturers</p>
+              <h3 className="text-2xl font-bold text-gray-900">{lecturers.length}</h3>
             </div>
           </div>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Lecturers</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {lecturers.filter(l => l.isActive).length}
-                  </dd>
-                </dl>
-              </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100 text-green-600">
+              <UserCheck className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Active</p>
+              <h3 className="text-2xl font-bold text-gray-900">{lecturers.filter(l => l.isActive).length}</h3>
             </div>
           </div>
         </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Schedules</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {lecturers.reduce((sum, l) => sum + l.lecturer.scheduleCount, 0)}
-                  </dd>
-                </dl>
-              </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-orange-100 text-orange-600">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Adjunct</p>
+              <h3 className="text-2xl font-bold text-gray-900">{lecturers.filter(l => l.lecturer.isAdjunct).length}</h3>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lecturers Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-4 sm:px-6 sm:py-5">
-          <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">All Lecturers</h3>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Complete list of lecturers in the system
-          </p>
-        </div>
+      {/* Search and Filter */}
+      <div className="flex items-center space-x-2 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <Search className="h-5 w-5 text-gray-400" />
+        <Input 
+          placeholder="Search by name, email, or ID..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border-none focus-visible:ring-0"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lecturer
-                </th>
-                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee ID
-                </th>
-                <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Department
-                </th>
-                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rank
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Schedules
-                </th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lecturer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Info</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Workload</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {lecturers.map((lecturer) => (
+              {filteredLecturers.map((lecturer) => (
                 <tr key={lecturer.id} className="hover:bg-gray-50">
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
-                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                          <span className="text-xs sm:text-sm font-medium text-white">
-                            {lecturer.user.firstName?.[0] || lecturer.user.email[0].toUpperCase()}
-                          </span>
-                        </div>
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                        {lecturer.user.firstName[0]}
                       </div>
-                      <div className="ml-3 sm:ml-4 min-w-0 flex-1">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {lecturer.user.firstName && lecturer.user.lastName
-                            ? `${lecturer.user.firstName} ${lecturer.user.lastName}`
-                            : lecturer.user.email
-                          }
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {lecturer.user.firstName} {lecturer.user.lastName}
                         </div>
-                        <div className="text-xs sm:text-sm text-gray-500 truncate">{lecturer.user.email}</div>
-                        <div className="sm:hidden mt-1 space-y-1">
-                          <div className="text-xs text-gray-500">
-                            ID: {lecturer.lecturer.employeeId || 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Dept: {lecturer.lecturer.department || 'N/A'}
-                          </div>
-                        </div>
+                        <div className="text-sm text-gray-500">{lecturer.user.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lecturer.lecturer.employeeId || 'N/A'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{lecturer.lecturer.department || 'No Dept'}</div>
+                    <div className="text-xs text-gray-500">{lecturer.lecturer.rank || 'No Rank'}</div>
                   </td>
-                  <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lecturer.lecturer.department || 'N/A'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                     <div className="flex flex-col gap-1">
+                        <Badge variant={lecturer.isActive ? "default" : "destructive"} className="w-fit">
+                            {lecturer.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        {lecturer.lecturer.isAdjunct && (
+                            <Badge variant="outline" className="w-fit border-orange-200 text-orange-700 bg-orange-50">
+                                Adjunct
+                            </Badge>
+                        )}
+                     </div>
                   </td>
-                  <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {lecturer.lecturer.rank || 'N/A'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{lecturer.lecturer.scheduleCount} Schedules</div>
+                    {lecturer.lecturer.overloadCount > 0 && (
+                         <div className="flex items-center text-xs text-orange-600 mt-1">
+                             <AlertTriangle className="h-3 w-3 mr-1" />
+                             {lecturer.lecturer.overloadCount} Overload
+                         </div>
+                    )}
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {lecturer.lecturer.scheduleCount}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      lecturer.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      <span className="hidden sm:inline">{lecturer.isActive ? 'Active' : 'Inactive'}</span>
-                      <span className="sm:hidden">{lecturer.isActive ? '✓' : '✗'}</span>
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end space-x-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleSwitchUser(lecturer)} title="Switch User">
+                            <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEditModal(lecturer)}>
+                            <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={lecturer.isActive ? "text-red-600" : "text-green-600"}
+                            onClick={() => handleToggleStatus(lecturer)}
+                        >
+                            {lecturer.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                        </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        
-        {lecturers.length === 0 && (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No lecturers found</h3>
-            <p className="mt-1 text-sm text-gray-500">No lecturers are currently registered in the system.</p>
-          </div>
-        )}
       </div>
+
+      {/* Add Lecturer Modal */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Lecturer</DialogTitle>
+            <DialogDescription>
+              Create a new lecturer account. They will receive an email to set their password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Initial Password</Label>
+              <Input id="password" type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="employeeId">Employee ID</Label>
+                    <Input id="employeeId" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Input id="department" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} />
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="rank">Rank</Label>
+                <Input id="rank" value={formData.rank} onChange={(e) => setFormData({...formData, rank: e.target.value})} />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="isAdjunct" 
+                checked={formData.isAdjunct} 
+                onCheckedChange={(checked) => setFormData({...formData, isAdjunct: checked})} 
+              />
+              <Label htmlFor="isAdjunct">Is Adjunct (Part-time)</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch 
+                id="isOverload" 
+                checked={formData.isOverload} 
+                onCheckedChange={(checked) => setFormData({...formData, isOverload: checked})} 
+              />
+              <Label htmlFor="isOverload">Overload Status</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddLecturer}>Add Lecturer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lecturer Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Lecturer</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="edit-firstName">First Name</Label>
+                    <Input id="edit-firstName" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-lastName">Last Name</Label>
+                    <Input id="edit-lastName" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                </div>
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="edit-employeeId">Employee ID</Label>
+                    <Input id="edit-employeeId" value={formData.employeeId} onChange={(e) => setFormData({...formData, employeeId: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="edit-department">Department</Label>
+                    <Input id="edit-department" value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} />
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="edit-rank">Rank</Label>
+                <Input id="edit-rank" value={formData.rank} onChange={(e) => setFormData({...formData, rank: e.target.value})} />
+            </div>
+            <div className="flex items-center space-x-2">
+                <Switch 
+                  id="edit-isAdjunct" 
+                  checked={formData.isAdjunct} 
+                  onCheckedChange={(checked) => setFormData({...formData, isAdjunct: checked})} 
+                />
+                <Label htmlFor="edit-isAdjunct">Is Adjunct (Part-time)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="edit-isOverload" 
+                  checked={formData.isOverload} 
+                  onCheckedChange={(checked) => setFormData({...formData, isOverload: checked})} 
+                />
+                <Label htmlFor="edit-isOverload">Overload Status</Label>
+              </div>
+             <div className="flex items-center space-x-2">
+              <Switch 
+                id="edit-isActive" 
+                checked={formData.isActive} 
+                onCheckedChange={(checked) => setFormData({...formData, isActive: checked})} 
+              />
+              <Label htmlFor="edit-isActive">Account Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditLecturer}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

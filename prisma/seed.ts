@@ -628,8 +628,8 @@ async function main() {
               gpsLongitude: isVirtual ? null : (classroom?.gpsLongitude || -0.1870),
               locationVerified: !isVirtual,
               method: isVirtual ? 'virtual' : 'onsite',
-              classRepVerified: Math.random() > 0.1, // 90% class rep verification rate
-              classRepComment: Math.random() > 0.7 ? 'Lecturer arrived on time and conducted full session' : null
+              supervisorVerified: Math.random() > 0.1, // 90% supervisor verification rate
+              supervisorComment: Math.random() > 0.7 ? 'Lecturer arrived on time and conducted full session' : null
             }
           })
         }

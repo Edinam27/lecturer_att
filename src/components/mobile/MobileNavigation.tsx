@@ -15,6 +15,7 @@ import {
   BellIcon,
   WifiIcon,
   CheckCircleIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeSolidIcon,
@@ -24,62 +25,17 @@ import {
 } from '@heroicons/react/24/solid';
 import { signOut } from 'next-auth/react';
 import { usePWA } from '@/components/providers/PWAProvider';
-
-interface NavigationItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  solidIcon: React.ComponentType<{ className?: string }>;
-  roles: string[];
-  badge?: number;
-}
-
-const navigationItems: NavigationItem[] = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: HomeIcon,
-    solidIcon: HomeSolidIcon,
-    roles: ['LECTURER', 'CLASS_REP', 'ADMIN', 'ACADEMIC_COORDINATOR'],
-  },
-  {
-    name: 'Take Attendance',
-    href: '/mobile/attendance',
-    icon: ClipboardDocumentCheckIcon,
-    solidIcon: ClipboardSolidIcon,
-    roles: ['LECTURER', 'ADMIN', 'ACADEMIC_COORDINATOR'],
-  },
-  {
-    name: 'Verify Attendance',
-    href: '/mobile/class-rep',
-    icon: CheckCircleIcon,
-    solidIcon: CheckCircleIcon,
-    roles: ['CLASS_REP', 'ADMIN', 'ACADEMIC_COORDINATOR'],
-  },
-  {
-    name: 'My Class',
-    href: '/dashboard/class-info',
-    icon: UserGroupIcon,
-    solidIcon: UserGroupSolidIcon,
-    roles: ['CLASS_REP', 'LECTURER', 'ADMIN', 'ACADEMIC_COORDINATOR'],
-  },
-  {
-    name: 'Analytics',
-    href: '/dashboard/analytics',
-    icon: ChartBarIcon,
-    solidIcon: ChartBarSolidIcon,
-    roles: ['LECTURER', 'ADMIN', 'ACADEMIC_COORDINATOR'],
-  },
-];
+import { navigationItems } from '@/config/navigation';
+import { UserRole } from '@prisma/client';
 
 export default function MobileNavigation() {
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { isOnline, pendingSyncCount, hasUpdate } = usePWA();
+  const { isOnline, pendingSyncCount, hasUpdate, canInstall, installPWA } = usePWA();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const userRole = session?.user?.role;
+  const userRole = session?.user?.role as UserRole;
   const filteredItems = navigationItems.filter(item => 
     userRole && item.roles.includes(userRole)
   );
@@ -228,6 +184,19 @@ export default function MobileNavigation() {
                 
                 {/* Additional Menu Items */}
                 <div className="border-t border-gray-200 p-4 space-y-2">
+                  {canInstall && (
+                    <button
+                      onClick={() => {
+                        installPWA();
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <ArrowDownTrayIcon className="w-5 h-5" />
+                      <span className="font-medium">Install App</span>
+                    </button>
+                  )}
+                  
                   <button
                     onClick={() => {
                       router.push('/dashboard/notifications');

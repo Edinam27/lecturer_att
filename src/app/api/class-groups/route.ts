@@ -110,12 +110,18 @@ export async function POST(request: NextRequest) {
         name,
         programmeId,
         admissionYear: parseInt(admissionYear),
-        currentSemester: currentSemester ? parseInt(currentSemester) : 1,
-        maxStudents: maxStudents ? parseInt(maxStudents) : 50,
+        semester: currentSemester ? currentSemester.toString() : '1',
+        studentCount: maxStudents ? parseInt(maxStudents) : 50,
         deliveryMode: deliveryMode || 'FACE_TO_FACE',
         classRepId: classRepId || null
       },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        admissionYear: true,
+        semester: true,
+        studentCount: true,
+        deliveryMode: true,
         programme: {
           select: {
             id: true,
@@ -133,7 +139,6 @@ export async function POST(request: NextRequest) {
         },
         _count: {
           select: {
-            students: true,
             courseSchedules: true
           }
         }

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get comprehensive system statistics
-    const [userStats, programmeStats, courseStats, attendanceStats, buildingStats] = await Promise.all([
+    const [userStats, programmeStats, courseStats, attendanceStats, buildingStats, supervisorStats] = await Promise.all([
       // User statistics
       prisma.user.groupBy({
         by: ['role'],
@@ -35,14 +35,16 @@ export async function GET(request: NextRequest) {
       Promise.all([
         prisma.course.count(),
         prisma.courseSchedule.count(),
-        prisma.classGroup.count()
+        prisma.classGroup.count(),
+        prisma.course.count({ where: { virtualEnabled: true } }), // Fixed to count courses not schedules for virtual
+        prisma.course.count({ where: { hybridEnabled: true } })
       ]),
       
       // Attendance statistics
       Promise.all([
         prisma.attendanceRecord.count(),
-        prisma.attendanceRecord.count({ where: { classRepVerified: true } }),
-        prisma.attendanceRecord.count({ where: { classRepVerified: false } })
+        prisma.attendanceRecord.count({ where: { supervisorVerified: true } }),
+        prisma.attendanceRecord.count({ where: { supervisorVerified: false } })
       ]),
       
       // Building and classroom statistics
@@ -51,6 +53,12 @@ export async function GET(request: NextRequest) {
         prisma.classroom.count(),
         prisma.classroom.count({ where: { virtualLink: { not: null } } }),
         prisma.classroom.count({ where: { virtualLink: null } })
+      ]),
+
+      // Supervisor statistics
+      Promise.all([
+        prisma.supervisorLog.count(),
+        prisma.supervisorLog.count({ where: { technicalIssues: { not: null } } })
       ])
     ])
 
@@ -109,8 +117,8 @@ export async function GET(request: NextRequest) {
     // Calculate overall attendance rate
     const totalSchedules = courseStats[1] // courseSchedule count
     const totalAttendance = attendanceStats[0] // total attendance records
-    const classRepVerifiedAttendance = attendanceStats[1] // class rep verified attendance
-    const classRepUnverifiedAttendance = attendanceStats[2] // class rep unverified attendance
+    const verifiedAttendance = attendanceStats[1] // supervisor verified attendance
+    const unverifiedAttendance = attendanceStats[2] // supervisor unverified attendance
     const overallAttendanceRate = totalSchedules > 0 ? Math.round((totalAttendance / totalSchedules) * 100) : 0
 
     // Format user statistics
@@ -132,7 +140,8 @@ export async function GET(request: NextRequest) {
         admins: usersByRole.admin || 0,
         coordinators: usersByRole.coordinator || 0,
         lecturers: usersByRole.lecturer || 0,
-        classReps: usersByRole.class_rep || 0
+        classReps: usersByRole.class_rep || 0,
+        onlineSupervisors: usersByRole.online_supervisor || 0
       },
       programmes: {
         total: Object.values(programmesByLevel).reduce((sum, count) => sum + count, 0),
@@ -141,14 +150,20 @@ export async function GET(request: NextRequest) {
       courses: {
         total: courseStats[0],
         schedules: courseStats[1],
-        classGroups: courseStats[2]
+        classGroups: courseStats[2],
+        virtualSchedules: courseStats[3],
+        hybridSchedules: courseStats[4]
       },
       attendance: {
         total: totalAttendance,
-        verified: classRepVerifiedAttendance,
-        unverified: classRepUnverifiedAttendance,
+        verified: verifiedAttendance,
+        unverified: unverifiedAttendance,
         rate: overallAttendanceRate,
         recentActivity
+      },
+      onlineMonitoring: {
+        totalLogs: supervisorStats[0],
+        issuesReported: supervisorStats[1]
       },
       infrastructure: {
         buildings: buildingStats[0],

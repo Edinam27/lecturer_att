@@ -41,7 +41,7 @@ export default function VerifyAttendancePage() {
   useEffect(() => {
     if (status === 'loading') return
     
-    if (!session || session.user.role !== 'CLASS_REP') {
+    if (!session || (session.user.role !== 'SUPERVISOR' && session.user.role !== 'ADMIN')) {
       router.push('/dashboard')
       return
     }
@@ -123,9 +123,9 @@ export default function VerifyAttendancePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Verify Lecturer Attendance</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Supervisor Attendance Verification</h1>
         <p className="mt-2 text-gray-600">
-          Review and verify lecturer attendance records for your class
+          Review and verify lecturer attendance records
         </p>
       </div>
 

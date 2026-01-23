@@ -33,6 +33,36 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Also update AttendanceRecord if it exists
+    try {
+      const today = new Date()
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+
+      const attendanceRecord = await prisma.attendanceRecord.findFirst({
+        where: {
+          courseScheduleId: scheduleId,
+          timestamp: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        }
+      })
+
+      if (attendanceRecord) {
+        const isVerified = status === 'ongoing' || status === 'online'
+        await prisma.attendanceRecord.update({
+          where: { id: attendanceRecord.id },
+          data: {
+            supervisorVerified: isVerified,
+            supervisorComment: comments
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Error updating attendance record from online supervisor log:', err)
+    }
+
     return NextResponse.json({ success: true, log })
   } catch (error) {
     console.error('Error submitting online verification:', error)

@@ -9,13 +9,46 @@ export async function GET(request: NextRequest) {
     
     // Permission check is handled by middleware
 
+    let whereClause: any = {
+      role: 'LECTURER'
+    };
+
+    if (session?.user.role === 'COORDINATOR') {
+      whereClause = {
+        role: 'LECTURER',
+        lecturer: {
+          OR: [
+            {
+              courseSchedules: {
+                some: {
+                  course: {
+                    programme: {
+                      coordinator: session.user.id
+                    }
+                  }
+                }
+              }
+            },
+            {
+              courseSchedules: {
+                none: {}
+              }
+            }
+          ]
+        }
+      };
+    }
+
     // Fetch all lecturers
     const lecturers = await prisma.user.findMany({
-      where: {
-        role: 'LECTURER',
-        isActive: true
-      },
-      include: {
+      where: whereClause,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
         lecturer: {
           select: {
             id: true, // Include lecturer ID
@@ -23,9 +56,12 @@ export async function GET(request: NextRequest) {
             department: true,
             employmentType: true,
             rank: true,
-            _count: {
+            isAdjunct: true,
+            isOverload: true,
+            courseSchedules: {
               select: {
-                courseSchedules: true
+                isOverload: true,
+                id: true
               }
             }
           }
@@ -39,23 +75,31 @@ export async function GET(request: NextRequest) {
     // Format the response - use lecturer.id instead of user.id for proper filtering
     const formattedLecturers = lecturers
       .filter(lecturer => lecturer.lecturer) // Only include users who have lecturer records
-      .map(lecturer => ({
-        id: lecturer.lecturer!.id, // Use lecturer ID, not user ID
-        user: {
-          firstName: lecturer.firstName,
-          lastName: lecturer.lastName,
-          email: lecturer.email
-        },
-        isActive: lecturer.isActive,
-        createdAt: lecturer.createdAt,
-        lecturer: {
-          employeeId: lecturer.lecturer?.employeeId,
-          department: lecturer.lecturer?.department,
-          employmentType: lecturer.lecturer?.employmentType,
-          rank: lecturer.lecturer?.rank,
-          scheduleCount: lecturer.lecturer?._count.courseSchedules || 0
-        }
-      }));
+      .map(lecturer => {
+        const scheduleCount = lecturer.lecturer!.courseSchedules.length;
+        const overloadCount = lecturer.lecturer!.courseSchedules.filter(s => s.isOverload).length;
+        
+        return {
+          id: lecturer.lecturer!.id, // Use lecturer ID, not user ID
+          userId: lecturer.id,
+          user: {
+            firstName: lecturer.firstName,
+            lastName: lecturer.lastName,
+            email: lecturer.email
+          },
+          isActive: lecturer.isActive,
+          createdAt: lecturer.createdAt,
+          lecturer: {
+            employeeId: lecturer.lecturer?.employeeId,
+            department: lecturer.lecturer?.department,
+            employmentType: lecturer.lecturer?.employmentType,
+            rank: lecturer.lecturer?.rank,
+            isAdjunct: lecturer.lecturer?.isAdjunct || false,
+            scheduleCount: scheduleCount,
+            overloadCount: overloadCount
+          }
+        };
+      });
 
     return NextResponse.json(formattedLecturers);
   } catch (error) {
@@ -80,8 +124,8 @@ export async function POST(request: NextRequest) {
 
     const userRole = session.user.role;
 
-    // Only admins can create lecturers
-    if (userRole !== 'ADMIN') {
+    // Only admins and coordinators can create lecturers
+    if (userRole !== 'ADMIN' && userRole !== 'COORDINATOR') {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -98,7 +142,9 @@ export async function POST(request: NextRequest) {
       dateOfBirth,
       employeeId,
       department,
-      specialization
+      specialization,
+      isAdjunct,
+      isOverload
     } = body;
 
     // Validate required fields
@@ -138,44 +184,40 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create lecturer with profile
-    const lecturer = await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName,
         role: 'LECTURER',
-        profile: {
-          create: {
-            firstName,
-            lastName,
-            phoneNumber: phoneNumber || null,
-            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null
-          }
-        },
+        phoneNumber: phoneNumber || null,
         lecturer: {
           create: {
             employeeId,
             department: department || null,
-            specialization: specialization || null
+            specialization: specialization || null,
+            // isAdjunct: Boolean(isAdjunct), // Temporarily disabled
+            // isOverload: Boolean(isOverload) // Temporarily disabled
           }
         }
       },
       include: {
-        profile: true,
         lecturer: true
       }
     });
 
-    // Format response (exclude password)
-    const { password: _, ...lecturerWithoutPassword } = lecturer;
+    // Format response (exclude password hash)
+    const { passwordHash: _, ...userWithoutPassword } = user;
     
     return NextResponse.json({
       message: 'Lecturer created successfully',
-      lecturer: lecturerWithoutPassword
+      lecturer: userWithoutPassword
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating lecturer:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     );
   }

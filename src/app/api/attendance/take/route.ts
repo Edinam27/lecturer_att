@@ -11,7 +11,8 @@ const takeAttendanceSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   method: z.enum(['onsite', 'virtual']),
-  action: z.enum(['start', 'end']).optional() // For virtual sessions
+  action: z.enum(['start', 'end']).optional(), // For virtual sessions
+  remarks: z.string().optional()
 })
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { scheduleId, latitude, longitude, method, action } = takeAttendanceSchema.parse(body)
+    const { scheduleId, latitude, longitude, method, action, remarks } = takeAttendanceSchema.parse(body)
     
     // Validate required fields based on method
     if (method === 'onsite' && (!latitude || !longitude)) {
@@ -114,8 +115,8 @@ export async function POST(request: NextRequest) {
             gpsLongitude: null,
             locationVerified: false, // Not applicable for virtual
             method: method,
-            classRepVerified: null,
-            classRepComment: null,
+            supervisorVerified: null,
+            supervisorComment: null,
             sessionStartTime: new Date(),
             timeWindowVerified: virtualVerification.timeWindowVerified,
             meetingLinkVerified: virtualVerification.meetingLinkVerified,
@@ -237,14 +238,15 @@ export async function POST(request: NextRequest) {
         gpsLongitude: longitude || null,
         locationVerified,
         method: method,
-        classRepVerified: null, // Will be verified later by class rep
-        classRepComment: null,
+        supervisorVerified: null, // Will be verified later by supervisor
+        supervisorComment: null,
         sessionStartTime: method === 'virtual' ? new Date() : null,
         timeWindowVerified,
         meetingLinkVerified,
         sessionDurationMet: method === 'onsite', // Onsite doesn't need duration check
         deviceFingerprint: method === 'virtual' ? deviceFingerprint : null,
-        ipAddress: method === 'virtual' ? ipAddress : null
+        ipAddress: method === 'virtual' ? ipAddress : null,
+        remarks: remarks || null
       }
     })
 
@@ -253,15 +255,15 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.user.id,
         action: 'ATTENDANCE_RECORDED',
-        entityType: 'AttendanceRecord',
-        entityId: attendanceRecord.id,
-        details: {
+        targetType: 'AttendanceRecord',
+        targetId: attendanceRecord.id,
+        metadata: JSON.stringify({
           scheduleId,
           course: schedule.course.name,
           classGroup: schedule.classGroup.name,
           location: { latitude, longitude },
           distance: locationVerification?.distance || null
-        }
+        })
       }
     })
 

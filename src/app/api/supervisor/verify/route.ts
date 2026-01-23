@@ -45,6 +45,33 @@ export async function POST(request: NextRequest) {
            checkInTime: new Date() // Update time to latest check
          }
        })
+
+       // Also update AttendanceRecord if it exists
+       try {
+         const attendanceRecord = await prisma.attendanceRecord.findFirst({
+           where: {
+             courseScheduleId,
+             timestamp: {
+               gte: startOfDay,
+               lt: endOfDay
+             }
+           }
+         })
+
+         if (attendanceRecord) {
+           const isVerified = status === 'ongoing' || status === 'online'
+           await prisma.attendanceRecord.update({
+             where: { id: attendanceRecord.id },
+             data: {
+               supervisorVerified: isVerified,
+               supervisorComment: comments
+             }
+           })
+         }
+       } catch (err) {
+         console.error('Error updating attendance record from supervisor log:', err)
+       }
+
        return NextResponse.json(updatedLog)
     }
 
@@ -57,6 +84,34 @@ export async function POST(request: NextRequest) {
         isOnline
       }
     })
+
+    // Also update AttendanceRecord if it exists
+    try {
+      const attendanceRecord = await prisma.attendanceRecord.findFirst({
+        where: {
+          courseScheduleId,
+          timestamp: {
+            gte: startOfDay,
+            lt: endOfDay
+          }
+        }
+      })
+
+      if (attendanceRecord) {
+        // If status implies presence, verify it. If absence, mark as disputed (false).
+        const isVerified = status === 'ongoing' || status === 'online'
+        await prisma.attendanceRecord.update({
+          where: { id: attendanceRecord.id },
+          data: {
+            supervisorVerified: isVerified,
+            supervisorComment: comments
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Error updating attendance record from supervisor log:', err)
+      // Don't fail the request if this part fails, as the log was created
+    }
 
     return NextResponse.json(log)
   } catch (error) {

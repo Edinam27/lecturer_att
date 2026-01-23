@@ -6,8 +6,8 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
 interface Course {
-  id: number;
-  code: string;
+  id: string;
+  courseCode: string;
   title: string;
   programme: {
     name: string;
@@ -15,7 +15,7 @@ interface Course {
 }
 
 interface ClassGroup {
-  id: number;
+  id: string;
   name: string;
   programme: {
     name: string;
@@ -23,16 +23,16 @@ interface ClassGroup {
 }
 
 interface Lecturer {
-  id: number;
-  email: string;
-  profile: {
+  id: string;
+  user: {
     firstName: string;
     lastName: string;
+    email: string;
   };
 }
 
 interface Classroom {
-  id: number;
+  id: string;
   name: string;
   building: {
     name: string;
@@ -40,42 +40,40 @@ interface Classroom {
 }
 
 interface Schedule {
-  id: number;
+  id: string;
   dayOfWeek: string;
   startTime: string;
   endTime: string;
   sessionType: string;
   isActive: boolean;
   course: {
-    id: number;
+    id: string;
     code: string;
-    title: string;
+    name: string;
     programme: {
       name: string;
     };
   };
   classGroup: {
-    id: number;
+    id: string;
     name: string;
     programme: {
       name: string;
     };
   };
   lecturer: {
-    id: number;
+    id: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    profile: {
-      firstName: string;
-      lastName: string;
-    };
   };
   classroom: {
-    id: number;
+    id: string;
     name: string;
     building: {
       name: string;
     };
-  };
+  } | null;
 }
 
 export default function EditSchedulePage({ params }: { params: Promise<{ id: string }> }) {
@@ -136,8 +134,8 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         courseId: scheduleData.course.id.toString(),
         classGroupId: scheduleData.classGroup.id.toString(),
         lecturerId: scheduleData.lecturer.id.toString(),
-        classroomId: scheduleData.classroom.id.toString(),
-        dayOfWeek: scheduleData.dayOfWeek,
+        classroomId: scheduleData.classroom ? scheduleData.classroom.id.toString() : '',
+        dayOfWeek: scheduleData.dayOfWeek.toString(),
         startTime: scheduleData.startTime,
         endTime: scheduleData.endTime,
         sessionType: scheduleData.sessionType,
@@ -187,11 +185,11 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          courseId: parseInt(formData.courseId),
-          classGroupId: parseInt(formData.classGroupId),
-          lecturerId: parseInt(formData.lecturerId),
-          classroomId: parseInt(formData.classroomId),
-          dayOfWeek: formData.dayOfWeek,
+          courseId: formData.courseId,
+          classGroupId: formData.classGroupId,
+          lecturerId: formData.lecturerId,
+          classroomId: formData.classroomId || null,
+          dayOfWeek: parseInt(formData.dayOfWeek),
           startTime: formData.startTime,
           endTime: formData.endTime,
           sessionType: formData.sessionType,
@@ -278,7 +276,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     <option value="">Select a course</option>
                     {courses.map((course) => (
                       <option key={course.id} value={course.id}>
-                        {course.code} - {course.title} ({course.programme.name})
+                        {course.courseCode} - {course.title} ({course.programme?.name || 'Unknown Programme'})
                       </option>
                     ))}
                   </select>
@@ -299,7 +297,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     <option value="">Select a class group</option>
                     {classGroups.map((group) => (
                       <option key={group.id} value={group.id}>
-                        {group.name} ({group.programme.name})
+                        {group.name} ({group.programme?.name || 'Unknown Programme'})
                       </option>
                     ))}
                   </select>
@@ -320,7 +318,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     <option value="">Select a lecturer</option>
                     {lecturers.map((lecturer) => (
                       <option key={lecturer.id} value={lecturer.id}>
-                        {lecturer.profile.firstName} {lecturer.profile.lastName} ({lecturer.email})
+                        {lecturer.user?.firstName || 'Unknown'} {lecturer.user?.lastName || 'Lecturer'} ({lecturer.user?.email})
                       </option>
                     ))}
                   </select>
@@ -341,7 +339,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     <option value="">Select a classroom</option>
                     {classrooms.map((classroom) => (
                       <option key={classroom.id} value={classroom.id}>
-                        {classroom.building.name} - {classroom.name}
+                        {classroom.building?.name} - {classroom.name}
                       </option>
                     ))}
                   </select>
@@ -360,13 +358,13 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select day</option>
-                    <option value="MONDAY">Monday</option>
-                    <option value="TUESDAY">Tuesday</option>
-                    <option value="WEDNESDAY">Wednesday</option>
-                    <option value="THURSDAY">Thursday</option>
-                    <option value="FRIDAY">Friday</option>
-                    <option value="SATURDAY">Saturday</option>
-                    <option value="SUNDAY">Sunday</option>
+                    <option value="1">Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6">Saturday</option>
+                    <option value="0">Sunday</option>
                   </select>
                 </div>
 

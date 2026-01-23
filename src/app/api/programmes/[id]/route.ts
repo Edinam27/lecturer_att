@@ -5,8 +5,9 @@ import { prisma } from '@/lib/db'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     
@@ -47,8 +48,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     
@@ -56,13 +58,23 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only ADMIN can update programmes
+    // Only ADMIN and assigned COORDINATOR can update programmes
+    const existingProgramme = await prisma.programme.findUnique({
+      where: { id: params.id }
+    })
+
+    if (!existingProgramme) {
+      return NextResponse.json({ error: 'Programme not found' }, { status: 404 })
+    }
+
     if (session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      if (session.user.role !== 'COORDINATOR' || existingProgramme.coordinator !== session.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     const body = await request.json()
-    const { name, code, level, duration, description } = body
+    const { name, code, level, duration, description, coordinatorId } = body
 
     // Validate required fields
     if (!name || !code || !level || !duration) {
@@ -70,15 +82,6 @@ export async function PUT(
         { error: 'Name, code, level, and duration are required' },
         { status: 400 }
       )
-    }
-
-    // Check if programme exists
-    const existingProgramme = await prisma.programme.findUnique({
-      where: { id: params.id }
-    })
-
-    if (!existingProgramme) {
-      return NextResponse.json({ error: 'Programme not found' }, { status: 404 })
     }
 
     // Check for duplicate programme code (excluding current programme)
@@ -111,15 +114,22 @@ export async function PUT(
       )
     }
 
+    const dataToUpdate: any = {
+      name,
+      code,
+      level,
+      duration: parseInt(duration),
+      description: description || null
+    }
+
+    // Only Admin can assign/change coordinator
+    if (session.user.role === 'ADMIN') {
+      dataToUpdate.coordinator = coordinatorId || null
+    }
+
     const updatedProgramme = await prisma.programme.update({
       where: { id: params.id },
-      data: {
-        name,
-        code,
-        level,
-        duration: parseInt(duration),
-        description: description || null
-      },
+      data: dataToUpdate,
       include: {
         _count: {
           select: {
@@ -142,8 +152,9 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await getServerSession(authOptions)
     

@@ -50,6 +50,13 @@ const adminCards: DashboardCard[] = [
     icon: 'chart-bar'
   },
   {
+    title: 'Online Monitor',
+    description: 'Monitor virtual classes and check system health',
+    href: '/dashboard/online-supervisor',
+    color: 'bg-cyan-500',
+    icon: 'computer-desktop'
+  },
+  {
     title: 'Import Data',
     description: 'Bulk import users, courses, and schedules',
     href: '/dashboard/import',
@@ -119,10 +126,13 @@ interface AdminStats {
     coordinators: number
     lecturers: number
     classReps: number
+    onlineSupervisors: number
   }
   courses: {
     total: number
     schedules: number
+    virtualSchedules: number
+    hybridSchedules: number
   }
   attendance: {
     total: number
@@ -131,6 +141,10 @@ interface AdminStats {
   }
   programmes: {
     total: number
+  }
+  onlineMonitoring: {
+    totalLogs: number
+    issuesReported: number
   }
 }
 
@@ -280,6 +294,43 @@ export default function AdminDashboard() {
               {loading ? '--' : stats?.users?.classReps?.toLocaleString() || '0'}
             </div>
             <div className="text-xs sm:text-sm text-gray-600">Class Reps</div>
+          </div>
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
+            <div className="text-lg sm:text-xl font-bold text-cyan-600">
+              {loading ? '--' : stats?.users?.onlineSupervisors?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600">Online Supervisors</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Online Monitoring Overview */}
+      <div className="mt-8 sm:mt-12">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Online Monitoring Overview</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
+            <div className="text-xl sm:text-2xl font-bold text-indigo-600">
+              {loading ? '--' : stats?.onlineMonitoring?.totalLogs?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600">Total Monitored Sessions</div>
+          </div>
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600">
+              {loading ? '--' : stats?.onlineMonitoring?.issuesReported?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600">Issues Reported</div>
+          </div>
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">
+              {loading ? '--' : stats?.courses?.virtualSchedules?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600">Virtual Classes</div>
+          </div>
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
+            <div className="text-xl sm:text-2xl font-bold text-teal-600">
+              {loading ? '--' : stats?.courses?.hybridSchedules?.toLocaleString() || '0'}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-600">Hybrid Classes</div>
           </div>
         </div>
       </div>

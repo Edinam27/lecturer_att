@@ -25,8 +25,8 @@ interface AttendanceRecord {
   }
   locationVerified: boolean
   method: string
-  classRepVerified?: boolean | null
-  classRepComment?: string | null
+  supervisorVerified?: boolean | null
+  supervisorComment?: string | null
   gpsLatitude?: number | null
   gpsLongitude?: number | null
 }
@@ -56,9 +56,9 @@ export default function AttendancePage() {
   }
 
   const filteredRecords = attendanceRecords.filter(record => {
-    if (filter === 'verified') return record.classRepVerified === true
-    if (filter === 'disputed') return record.classRepVerified === false
-    if (filter === 'pending') return record.classRepVerified === null
+    if (filter === 'verified') return record.supervisorVerified === true
+    if (filter === 'disputed') return record.supervisorVerified === false
+    if (filter === 'pending') return record.supervisorVerified === null
     return true
   })
 
@@ -232,12 +232,12 @@ export default function AttendancePage() {
                      </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        record.classRepVerified === true ? 'bg-green-100 text-green-800' :
-                        record.classRepVerified === false ? 'bg-red-100 text-red-800' :
+                        record.supervisorVerified === true ? 'bg-green-100 text-green-800' :
+                        record.supervisorVerified === false ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {record.classRepVerified === true ? 'Verified' :
-                         record.classRepVerified === false ? 'Disputed' :
+                        {record.supervisorVerified === true ? 'Verified' :
+                         record.supervisorVerified === false ? 'Disputed' :
                          'Pending'}
                       </span>
                     </td>

@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Only class reps, admins, and academic coordinators can access this
-    if (!['CLASS_REP', 'ADMIN', 'ACADEMIC_COORDINATOR'].includes(session.user.role)) {
+    // Only class reps, admins, academic coordinators, and supervisors can access this
+    if (!['CLASS_REP', 'ADMIN', 'ACADEMIC_COORDINATOR', 'SUPERVISOR'].includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -38,64 +38,82 @@ export async function GET(request: NextRequest) {
     // For class reps, only show records for their class
     if (session.user.role === 'CLASS_REP') {
       // First, get the class rep's class group
-      const classRep = await prisma.classGroupStudent.findFirst({
+      const classGroup = await prisma.classGroup.findFirst({
         where: {
-          userId: session.user.id,
-          isClassRep: true,
-        },
-        include: {
-          classGroup: true,
-        },
+          classRepId: session.user.id,
+        }
       });
 
-      if (!classRep) {
+      if (!classGroup) {
         return NextResponse.json(
           { error: 'Class representative assignment not found' },
           { status: 404 }
         );
       }
 
-      whereClause.classSchedule = {
-        classGroupId: classRep.classGroupId,
+      whereClause.courseSchedule = {
+        classGroupId: classGroup.id,
       };
     }
 
     // Filter by status if provided
     if (status) {
-      whereClause.verificationStatus = status;
+      if (status === 'VERIFIED') {
+        whereClause.supervisorVerified = true;
+      } else if (status === 'DISPUTED') {
+        whereClause.supervisorVerified = false;
+      } else if (status === 'PENDING') {
+        whereClause.supervisorVerified = null;
+      }
     } else {
       // Default to pending if no status specified
-      whereClause.verificationStatus = 'PENDING';
+      whereClause.supervisorVerified = null;
     }
 
     // Filter by urgent (deadline passed) if requested
+    // Note: verificationDeadline field does not exist in schema, removing filter for now
+    /*
     if (urgent) {
       whereClause.verificationDeadline = {
         lt: new Date(),
       };
     }
+    */
 
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: whereClause,
-      include: {
-        classSchedule: {
-          include: {
+      select: {
+        id: true,
+        timestamp: true,
+        supervisorVerified: true,
+        supervisorComment: true,
+        remarks: true,
+        verificationConfidenceScore: true,
+        courseSchedule: {
+          select: {
+            startTime: true,
+            endTime: true,
             lecturer: {
               select: {
-                id: true,
-                name: true,
-                email: true,
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
               },
             },
-            subject: {
+            course: {
               select: {
                 id: true,
-                name: true,
-                code: true,
+                title: true,
+                courseCode: true,
               },
             },
             classroom: {
-              include: {
+              select: {
+                name: true,
                 building: {
                   select: {
                     id: true,
@@ -112,34 +130,10 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        verifications: {
-          include: {
-            verifiedBy: {
-              select: {
-                id: true,
-                name: true,
-                role: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
       },
       orderBy: [
         {
-          verificationDeadline: 'asc',
-        },
-        {
-          createdAt: 'desc',
+          timestamp: 'desc',
         },
       ],
       take: limit,
@@ -148,36 +142,44 @@ export async function GET(request: NextRequest) {
 
     // Format the response
     const formattedRecords = attendanceRecords.map(record => {
-      const schedule = record.classSchedule;
-      const latestVerification = record.verifications[0];
+      const schedule = record.courseSchedule;
       
+      let status = 'PENDING';
+      if (record.supervisorVerified === true) status = 'VERIFIED';
+      if (record.supervisorVerified === false) status = 'DISPUTED';
+
+      // Calculate deadline (e.g. 24 hours after session)
+      const deadline = new Date(record.timestamp);
+      deadline.setHours(deadline.getHours() + 24);
+
       return {
         id: record.id,
-        lecturerName: schedule.lecturer.name,
-        subject: schedule.subject.name,
-        subjectCode: schedule.subject.code,
+        lecturerName: `${schedule.lecturer.user.firstName} ${schedule.lecturer.user.lastName}`,
+        subject: schedule.course.title,
+        subjectCode: schedule.course.courseCode,
         classGroup: schedule.classGroup.name,
-        scheduledTime: schedule.scheduledTime.toISOString(),
-        actualTime: record.actualCheckInTime?.toISOString(),
-        status: record.verificationStatus,
-        location: `${schedule.classroom.building.name} - ${schedule.classroom.name}`,
-        building: schedule.classroom.building.name,
-        classroom: schedule.classroom.name,
-        notes: record.notes,
-        verificationDeadline: record.verificationDeadline.toISOString(),
-        isPresent: record.isPresent,
-        riskScore: record.riskScore,
-        studentName: record.student.name,
-        studentEmail: record.student.email,
-        createdAt: record.createdAt.toISOString(),
-        updatedAt: record.updatedAt.toISOString(),
-        verification: latestVerification ? {
-          id: latestVerification.id,
-          status: latestVerification.status,
-          notes: latestVerification.notes,
-          verifiedBy: latestVerification.verifiedBy.name,
-          verifiedByRole: latestVerification.verifiedBy.role,
-          verifiedAt: latestVerification.createdAt.toISOString(),
+        scheduledTime: schedule.startTime ? `${schedule.startTime} - ${schedule.endTime}` : record.timestamp.toISOString(), // Fallback
+        actualTime: record.timestamp.toISOString(),
+        status: status,
+        location: schedule.classroom ? `${schedule.classroom.building.name} - ${schedule.classroom.name}` : 'Unknown Location',
+        building: schedule.classroom ? schedule.classroom.building.name : '',
+        classroom: schedule.classroom ? schedule.classroom.name : '',
+        notes: record.remarks,
+        verificationDeadline: deadline.toISOString(),
+        isPresent: true, // Record exists means present
+        riskScore: record.verificationConfidenceScore || 0,
+        // Mock student data to satisfy frontend interface for now
+        studentName: 'N/A', 
+        studentEmail: 'N/A',
+        createdAt: record.timestamp.toISOString(),
+        updatedAt: new Date().toISOString(), // No updatedAt in schema snippet, using current or mock
+        verification: record.supervisorVerified !== null ? {
+          id: 'generated-id', // No separate verification record
+          status: status,
+          notes: record.supervisorComment,
+          verifiedBy: 'Supervisor', // Generic
+          verifiedByRole: 'SUPERVISOR',
+          verifiedAt: new Date().toISOString(), // Unknown
         } : null,
       };
     });
@@ -193,27 +195,27 @@ export async function GET(request: NextRequest) {
       pending: await prisma.attendanceRecord.count({
         where: {
           ...whereClause,
-          verificationStatus: 'PENDING',
+          supervisorVerified: null,
         },
       }),
       verified: await prisma.attendanceRecord.count({
         where: {
           ...whereClause,
-          verificationStatus: 'VERIFIED',
+          supervisorVerified: true,
         },
       }),
       disputed: await prisma.attendanceRecord.count({
         where: {
           ...whereClause,
-          verificationStatus: 'DISPUTED',
+          supervisorVerified: false,
         },
       }),
       urgent: await prisma.attendanceRecord.count({
         where: {
           ...whereClause,
-          verificationStatus: 'PENDING',
-          verificationDeadline: {
-            lt: new Date(),
+          supervisorVerified: null,
+          timestamp: {
+            lt: new Date(Date.now() - 24 * 60 * 60 * 1000), // Older than 24 hours
           },
         },
       }),
@@ -260,25 +262,39 @@ export async function POST(request: NextRequest) {
       where: {
         id: attendanceId,
       },
-      include: {
-        classSchedule: {
-          include: {
+      select: {
+        id: true,
+        timestamp: true,
+        supervisorVerified: true,
+        supervisorComment: true,
+        remarks: true,
+        verificationConfidenceScore: true,
+        courseSchedule: {
+          select: {
+            startTime: true,
+            endTime: true,
             lecturer: {
               select: {
                 id: true,
-                name: true,
-                email: true,
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
               },
             },
-            subject: {
+            course: {
               select: {
                 id: true,
-                name: true,
-                code: true,
+                title: true,
+                courseCode: true,
               },
             },
             classroom: {
-              include: {
+              select: {
+                name: true,
                 building: {
                   select: {
                     id: true,
@@ -295,28 +311,6 @@ export async function POST(request: NextRequest) {
             },
           },
         },
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            profileImage: true,
-          },
-        },
-        verifications: {
-          include: {
-            verifiedBy: {
-              select: {
-                id: true,
-                name: true,
-                role: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
       },
     });
 
@@ -329,15 +323,14 @@ export async function POST(request: NextRequest) {
 
     // Check permissions for class reps
     if (session.user.role === 'CLASS_REP') {
-      const classRep = await prisma.classGroupStudent.findFirst({
+      const classGroup = await prisma.classGroup.findFirst({
         where: {
-          userId: session.user.id,
-          isClassRep: true,
-          classGroupId: attendanceRecord.classSchedule.classGroup.id,
+          classRepId: session.user.id,
+          id: attendanceRecord.courseSchedule.classGroup.id,
         },
       });
 
-      if (!classRep) {
+      if (!classGroup) {
         return NextResponse.json(
           { error: 'Forbidden' },
           { status: 403 }
@@ -346,39 +339,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Format the response
-    const schedule = attendanceRecord.classSchedule;
+    const schedule = attendanceRecord.courseSchedule;
     const formattedRecord = {
       id: attendanceRecord.id,
-      lecturerName: schedule.lecturer.name,
-      subject: schedule.subject.name,
-      subjectCode: schedule.subject.code,
+      lecturerName: `${schedule.lecturer.user.firstName} ${schedule.lecturer.user.lastName}`,
+      subject: schedule.course.title,
+      subjectCode: schedule.course.courseCode,
       classGroup: schedule.classGroup.name,
-      scheduledTime: schedule.scheduledTime.toISOString(),
-      actualTime: attendanceRecord.actualCheckInTime?.toISOString(),
-      status: attendanceRecord.verificationStatus,
-      location: `${schedule.classroom.building.name} - ${schedule.classroom.name}`,
-      building: schedule.classroom.building.name,
-      classroom: schedule.classroom.name,
-      notes: attendanceRecord.notes,
-      verificationDeadline: attendanceRecord.verificationDeadline.toISOString(),
-      isPresent: attendanceRecord.isPresent,
-      riskScore: attendanceRecord.riskScore,
+      scheduledTime: schedule.startTime ? `${schedule.startTime} - ${schedule.endTime}` : attendanceRecord.timestamp.toISOString(),
+      actualTime: attendanceRecord.timestamp.toISOString(),
+      status: attendanceRecord.supervisorVerified === true ? 'VERIFIED' : attendanceRecord.supervisorVerified === false ? 'DISPUTED' : 'PENDING',
+      location: schedule.classroom ? `${schedule.classroom.building.name} - ${schedule.classroom.name}` : 'Unknown',
+      building: schedule.classroom ? schedule.classroom.building.name : '',
+      classroom: schedule.classroom ? schedule.classroom.name : '',
+      notes: attendanceRecord.remarks,
+      verificationDeadline: new Date(attendanceRecord.timestamp.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      isPresent: true,
+      riskScore: attendanceRecord.verificationConfidenceScore,
       student: {
-        id: attendanceRecord.student.id,
-        name: attendanceRecord.student.name,
-        email: attendanceRecord.student.email,
-        profileImage: attendanceRecord.student.profileImage,
+        id: 'N/A',
+        name: 'N/A',
+        email: 'N/A',
+        profileImage: null,
       },
-      createdAt: attendanceRecord.createdAt.toISOString(),
-      updatedAt: attendanceRecord.updatedAt.toISOString(),
-      verifications: attendanceRecord.verifications.map(verification => ({
-        id: verification.id,
-        status: verification.status,
-        notes: verification.notes,
-        verifiedBy: verification.verifiedBy.name,
-        verifiedByRole: verification.verifiedBy.role,
-        verifiedAt: verification.createdAt.toISOString(),
-      })),
+      createdAt: attendanceRecord.timestamp.toISOString(),
+      updatedAt: new Date().toISOString(),
+      verifications: [],
     };
 
     return NextResponse.json(formattedRecord);
