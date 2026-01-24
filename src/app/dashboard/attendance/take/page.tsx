@@ -11,6 +11,7 @@ interface Schedule {
   startTime: string
   endTime: string
   sessionType: string
+  meetingLink?: string | null
   course: {
     id: string
     name: string
@@ -44,6 +45,10 @@ export default function TakeAttendancePage() {
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<string>('')
   const [remarks, setRemarks] = useState('')
+  
+  // New state for editing link
+  const [isEditingLink, setIsEditingLink] = useState(false)
+  const [newLink, setNewLink] = useState('')
 
   useEffect(() => {
     if (session?.user.role !== 'LECTURER') {
@@ -56,7 +61,8 @@ export default function TakeAttendancePage() {
   // Update attendance method when schedule is selected
   useEffect(() => {
     if (selectedSchedule) {
-      const isVirtual = selectedSchedule.classroom.virtualLink && selectedSchedule.classroom.virtualLink.trim() !== ''
+      const link = selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink
+      const isVirtual = link && link.trim() !== ''
       setAttendanceMethod(isVirtual ? 'virtual' : 'onsite')
     }
   }, [selectedSchedule])
@@ -136,6 +142,31 @@ export default function TakeAttendancePage() {
     )
   }
 
+  const handleUpdateLink = async () => {
+    if (!selectedSchedule) return
+    
+    try {
+      const response = await fetch(`/api/schedules/${selectedSchedule.id}/link`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ link: newLink })
+      })
+      
+      if (response.ok) {
+        const updatedSchedule = { ...selectedSchedule, meetingLink: newLink }
+        setSelectedSchedule(updatedSchedule)
+        setSchedules(schedules.map(s => s.id === updatedSchedule.id ? updatedSchedule : s))
+        setIsEditingLink(false)
+        alert('Meeting link updated successfully')
+      } else {
+        alert('Failed to update link')
+      }
+    } catch (error) {
+      console.error('Error updating link:', error)
+      alert('Error updating link')
+    }
+  }
+
   const handleStartVirtualSession = async () => {
     if (!selectedSchedule) return
 
@@ -162,7 +193,10 @@ export default function TakeAttendancePage() {
         setSessionStartTime(new Date())
         alert('Virtual session started successfully!')
       } else {
-        alert(data.error || 'Failed to start virtual session')
+        const errorMessage = data.details 
+          ? `${data.error}\n\nDetails:\n${data.details.join('\n')}`
+          : data.error || 'Failed to start virtual session'
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error starting virtual session:', error)
@@ -320,7 +354,7 @@ export default function TakeAttendancePage() {
                           {schedule.classGroup.name} • {schedule.sessionType}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {schedule.classroom.virtualLink ? (
+                          {(schedule.meetingLink || schedule.classroom.virtualLink) ? (
                             <span className="inline-flex items-center">
                               <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -358,30 +392,62 @@ export default function TakeAttendancePage() {
                 {attendanceMethod === 'virtual' ? (
                   <div>
                     {/* Virtual Meeting Link */}
-                    {selectedSchedule.classroom.virtualLink && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-blue-900 mb-2">Meeting Link</h4>
-                        <div className="flex items-center justify-between">
-                          <a
-                            href={selectedSchedule.classroom.virtualLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
-                          >
-                            {selectedSchedule.classroom.virtualLink}
-                          </a>
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-sm font-medium text-blue-900">Meeting Link</h4>
+                        <button 
+                          onClick={() => {
+                            setNewLink(selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink || '')
+                            setIsEditingLink(!isEditingLink)
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {isEditingLink ? 'Cancel' : 'Edit'}
+                        </button>
+                      </div>
+
+                      {isEditingLink ? (
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={newLink}
+                            onChange={(e) => setNewLink(e.target.value)}
+                            className="flex-1 text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                            placeholder="Enter meeting link"
+                          />
                           <button
-                            onClick={() => navigator.clipboard.writeText(selectedSchedule.classroom.virtualLink!)}
-                            className="ml-2 p-1 text-blue-600 hover:text-blue-800"
-                            title="Copy link"
+                            onClick={handleUpdateLink}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
+                            Save
                           </button>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        (selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink) ? (
+                          <div className="flex items-center justify-between">
+                            <a
+                              href={selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
+                            >
+                              {selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink}
+                            </a>
+                            <button
+                              onClick={() => navigator.clipboard.writeText((selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink)!)}
+                              className="ml-2 p-1 text-blue-600 hover:text-blue-800"
+                              title="Copy link"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500 italic">No link provided. Click Edit to add one.</div>
+                        )
+                      )}
+                    </div>
 
                     {/* Virtual Session Controls */}
                     {!virtualSessionActive ? (
@@ -499,52 +565,52 @@ export default function TakeAttendancePage() {
                               onClick={getCurrentLocation}
                               className="mt-3 inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
-                              <svg className="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                              Retry Location Check
+                              Retry Location
                             </button>
                           </div>
                         )}
 
-                        <p className="text-sm text-gray-600 mb-4">
-                          Latitude: {location.latitude.toFixed(6)}, Longitude: {location.longitude.toFixed(6)}
-                        </p>
-                        <div className="mb-4">
-                          <label htmlFor="onsite-remarks" className="block text-sm font-medium text-gray-700 mb-1">
+                        <div className="mt-6">
+                          <label htmlFor="remarks" className="block text-sm font-medium text-gray-700">
                             Remarks (Optional)
                           </label>
-                          <textarea
-                            id="onsite-remarks"
-                            rows={3}
-                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                            placeholder="Enter any remarks (e.g. Room Change, Class Rep comments)..."
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                          />
+                          <div className="mt-1">
+                            <textarea
+                              id="remarks"
+                              name="remarks"
+                              rows={3}
+                              className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                              placeholder="Any comments about today's session..."
+                              value={remarks}
+                              onChange={(e) => setRemarks(e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <button
-                          onClick={handleTakeAttendance}
-                          disabled={submitting}
-                          className="w-full inline-flex justify-center items-center px-6 py-4 border border-transparent text-lg font-bold rounded-lg shadow-md hover:shadow-lg transition-all text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {submitting ? (
-                            <>
-                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Recording...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Record Attendance
-                            </>
-                          )}
-                        </button>
+
+                        <div className="mt-6">
+                          <button
+                            onClick={handleTakeAttendance}
+                            disabled={submitting}
+                            className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-bold rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                          >
+                            {submitting ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Recording...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Confirm Attendance
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

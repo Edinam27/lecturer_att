@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      meetingLink: schedule.meetingLink,
       course: {
         id: schedule.course.id,
         title: schedule.course.title,

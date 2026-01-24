@@ -200,6 +200,7 @@ model CourseSchedule {
   endTime      String      @map("end_time")   // HH:MM format
   classroomId  String?     @map("classroom_id")
   sessionType  SessionType @map("session_type")
+  meetingLink  String?     @map("meeting_link")
   isOverload   Boolean     @default(false) @map("is_overload")
 
   // Relations
