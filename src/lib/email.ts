@@ -85,7 +85,7 @@ class EmailService {
     switch (this.config.provider) {
       case 'smtp':
         if (this.config.smtp) {
-          this.transporter = nodemailer.createTransporter(this.config.smtp)
+          this.transporter = nodemailer.createTransport(this.config.smtp)
         }
         break
       case 'resend':
