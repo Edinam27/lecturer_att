@@ -35,6 +35,11 @@ export default function MobileNavigation() {
   const { isOnline, pendingSyncCount, hasUpdate, canInstall, installPWA } = usePWA();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Don't show navigation on auth pages
+  if (pathname.startsWith('/auth/')) {
+    return null;
+  }
+
   const userRole = session?.user?.role as UserRole;
   const filteredItems = navigationItems.filter(item => 
     userRole && item.roles.includes(userRole)
@@ -251,7 +256,11 @@ export function QuickActionFAB() {
   const pathname = usePathname();
   
   // Don't show FAB on mobile pages or if already on relevant page
-  if (pathname.startsWith('/mobile/') || pathname === '/dashboard') {
+  if (pathname.startsWith('/mobile/') || pathname === '/dashboard' || pathname.startsWith('/auth/')) {
+    return null;
+  }
+
+  if (!session) {
     return null;
   }
 
