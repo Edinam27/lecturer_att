@@ -6,10 +6,7 @@ async function main() {
   console.log('🧹 Starting cleanup of duplicate course schedules...')
 
   // 1. Fetch all schedules
-  const schedules = await prisma.courseSchedule.findMany({
-    orderBy: { createdAt: 'desc' } // Keep the newest ones? Or oldest? usually oldest preserves ID references better if others link to it. Let's keep oldest.
-    // Actually, let's keep the one with the most attendance records linked to it.
-  })
+  const schedules = await prisma.courseSchedule.findMany({})
 
   console.log(`Found ${schedules.length} total schedules. Checking for duplicates...`)
 

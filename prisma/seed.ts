@@ -699,7 +699,6 @@ async function main() {
             })
           }
         }
-        }
       }
     }
   }

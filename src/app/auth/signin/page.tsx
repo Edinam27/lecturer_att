@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
+import InstallPrompt from '@/components/pwa/InstallPrompt'
 
 const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -151,6 +152,7 @@ export default function SignInPage() {
           </div>
         </form>
       </div>
+      <InstallPrompt />
     </div>
   )
 }

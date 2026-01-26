@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { getUPSACoordinates, getUPSARadius, getDistance } from '@/lib/geolocation'
+import { useAttendanceLocation } from '@/hooks/useAttendanceLocation'
 
 interface Schedule {
   id: string
@@ -35,9 +36,17 @@ export default function TakeAttendancePage() {
   const router = useRouter()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null)
+  
+  const { 
+    location, 
+    loading: locationLoading, 
+    error: locationError, 
+    getLocation, 
+    submitAttendance,
+    isOffline 
+  } = useAttendanceLocation()
+
   const [distanceToCampus, setDistanceToCampus] = useState<number | null>(null)
-  const [locationError, setLocationError] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [attendanceMethod, setAttendanceMethod] = useState<'onsite' | 'virtual'>('onsite')
@@ -97,49 +106,14 @@ export default function TakeAttendancePage() {
     }
   }
 
-  const getCurrentLocation = () => {
-    setLocationError('')
-    
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser.')
-      return
+  const handleGetLocation = async () => {
+    const loc = await getLocation()
+    if (loc) {
+      // Calculate distance to campus
+      const campusCoords = getUPSACoordinates()
+      const distance = getDistance(loc, campusCoords)
+      setDistanceToCampus(distance)
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userCoords = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        }
-        setLocation(userCoords)
-        
-        // Calculate distance to campus
-        const campusCoords = getUPSACoordinates()
-        const distance = getDistance(userCoords, campusCoords)
-        setDistanceToCampus(distance)
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError('Location access denied. Please enable location services.')
-            break
-          case error.POSITION_UNAVAILABLE:
-            setLocationError('Location information is unavailable.')
-            break
-          case error.TIMEOUT:
-            setLocationError('Location request timed out.')
-            break
-          default:
-            setLocationError('An unknown error occurred while retrieving location.')
-            break
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    )
   }
 
   const handleUpdateLink = async () => {
@@ -254,32 +228,23 @@ export default function TakeAttendancePage() {
     setSubmitting(true)
 
     try {
-      const requestBody: any = {
+      const result = await submitAttendance({
         scheduleId: selectedSchedule.id,
         method: attendanceMethod,
-        remarks
-      }
-
-      if (attendanceMethod === 'onsite') {
-        requestBody.latitude = location!.latitude
-        requestBody.longitude = location!.longitude
-      }
-
-      const response = await fetch('/api/attendance/take', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
+        remarks,
+        latitude: location?.latitude,
+        longitude: location?.longitude
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        alert('Attendance recorded successfully!')
+      if (result.success) {
+        if (result.offline) {
+          alert('Offline: Attendance saved locally. Will sync when online.')
+        } else {
+          alert('Attendance recorded successfully!')
+        }
         router.push('/dashboard/attendance')
       } else {
-        alert(data.error || 'Failed to record attendance')
+        alert(result.error || 'Failed to record attendance')
       }
     } catch (error) {
       console.error('Error recording attendance:', error)
@@ -304,6 +269,22 @@ export default function TakeAttendancePage() {
         <p className="mt-2 text-gray-600">
           Record your attendance for today's sessions
         </p>
+        {isOffline && (
+          <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  You are currently offline. Attendance will be saved locally and synced when you reconnect.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {schedules.length === 0 ? (
@@ -526,14 +507,21 @@ export default function TakeAttendancePage() {
                           To record attendance, you must be physically present at UPSA campus. 
                           Click the button below to verify your location.
                         </p>
-                        <button
-                          onClick={getCurrentLocation}
-                          className="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-bold rounded-md shadow-sm text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+                        <button 
+                          onClick={handleGetLocation}
+                          className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
-                          <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
+                          {locationLoading ? (
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          )}
                           Get Current Location
                         </button>
                         {locationError && (
@@ -562,7 +550,7 @@ export default function TakeAttendancePage() {
                             You appear to be outside the allowed campus radius. You may still try to record attendance, but it might be flagged or rejected depending on system settings.
                             <br />
                             <button 
-                              onClick={getCurrentLocation}
+                              onClick={handleGetLocation}
                               className="mt-3 inline-flex items-center px-4 py-2 border border-indigo-600 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
                               Retry Location
