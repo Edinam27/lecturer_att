@@ -667,19 +667,38 @@ async function main() {
             supervisorComment = 'Lecturer was not present at the start time';
           }
 
-          await prisma.attendanceRecord.create({
-            data: {
-              lecturerId: schedule.lecturerId,
+          // Check if a record already exists for this schedule on this date
+          const startOfDay = new Date(sessionDate)
+          startOfDay.setHours(0, 0, 0, 0)
+          const endOfDay = new Date(sessionDate)
+          endOfDay.setHours(23, 59, 59, 999)
+
+          const existingRecord = await prisma.attendanceRecord.findFirst({
+            where: {
               courseScheduleId: schedule.id,
-              timestamp: sessionDateTime,
-              gpsLatitude: isVirtual ? null : (classroom?.gpsLatitude || 5.6037),
-              gpsLongitude: isVirtual ? null : (classroom?.gpsLongitude || -0.1870),
-              locationVerified: !isVirtual,
-              method: isVirtual ? 'virtual' : 'onsite',
-              supervisorVerified: supervisorVerified,
-              supervisorComment: supervisorComment
+              timestamp: {
+                gte: startOfDay,
+                lte: endOfDay
+              }
             }
           })
+
+          if (!existingRecord) {
+            await prisma.attendanceRecord.create({
+              data: {
+                lecturerId: schedule.lecturerId,
+                courseScheduleId: schedule.id,
+                timestamp: sessionDateTime,
+                gpsLatitude: isVirtual ? null : (classroom?.gpsLatitude || 5.6037),
+                gpsLongitude: isVirtual ? null : (classroom?.gpsLongitude || -0.1870),
+                locationVerified: !isVirtual,
+                method: isVirtual ? 'virtual' : 'onsite',
+                supervisorVerified: supervisorVerified,
+                supervisorComment: supervisorComment
+              }
+            })
+          }
+        }
         }
       }
     }

@@ -13,6 +13,7 @@
     "test:geolocation": "jest src/lib/__tests__/geolocation.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:cleanup": "tsx scripts/cleanup-duplicates.ts",
+    "db:cleanup:attendance": "tsx scripts/cleanup-attendance-duplicates.ts",
     "db:reset": "npx prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },
