@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma db push --schema=prisma/schema.production.prisma --accept-data-loss && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -12,6 +12,7 @@
     "test:coverage": "jest --coverage",
     "test:geolocation": "jest src/lib/__tests__/geolocation.test.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "db:cleanup": "tsx scripts/cleanup-duplicates.ts",
     "db:reset": "npx prisma db push --force-reset && npm run db:seed",
     "postinstall": "prisma generate"
   },

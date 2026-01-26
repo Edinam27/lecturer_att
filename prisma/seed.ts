@@ -3,17 +3,8 @@ import { hashPassword } from '../src/lib/auth'
 
 const prisma = new PrismaClient()
 
-export async function seed() {
+async function main() {
   console.log('🌱 Seeding database with comprehensive test data...')
-
-  // Clean up existing transactional data to prevent duplicates
-  console.log('🧹 Cleaning up existing transactional data...')
-  await prisma.attendanceRecord.deleteMany()
-  await prisma.virtualSession.deleteMany()
-  await prisma.supervisorLog.deleteMany()
-  await prisma.verificationRequest.deleteMany()
-  await prisma.courseSchedule.deleteMany()
-  console.log('✅ Cleaned up transactional data')
 
   // Create admin users
   const adminPassword = await hashPassword('admin123')
@@ -605,8 +596,22 @@ export async function seed() {
     const lecturer = allLecturers[schedule.lecturerIndex]
 
     if (course && classGroup && lecturer) {
-      const courseSchedule = await prisma.courseSchedule.create({
-        data: {
+      const courseSchedule = await prisma.courseSchedule.upsert({
+        where: {
+          courseId_classGroupId_dayOfWeek_startTime: {
+            courseId: course.id,
+            classGroupId: classGroup.id,
+            dayOfWeek: schedule.day,
+            startTime: schedule.start
+          }
+        },
+        update: {
+          lecturerId: lecturer.id,
+          endTime: schedule.end,
+          classroomId: classroom?.id,
+          sessionType: schedule.type as SessionType
+        },
+        create: {
           courseId: course.id,
           classGroupId: classGroup.id,
           lecturerId: lecturer.id,
@@ -705,13 +710,11 @@ export async function seed() {
   console.log(`- Attendance records for past 8 weeks created`)
 }
 
-if (require.main === module) {
-  seed()
-    .catch((e) => {
-      console.error('❌ Error seeding database:', e)
-      process.exit(1)
-    })
-    .finally(async () => {
-      await prisma.$disconnect()
-    })
-}
+main()
+  .catch((e) => {
+    console.error('❌ Error seeding database:', e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

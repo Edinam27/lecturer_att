@@ -211,6 +211,7 @@ model CourseSchedule {
   virtualSessions   VirtualSession[]
   supervisorLogs    SupervisorLog[]
 
+  @@unique([courseId, classGroupId, dayOfWeek, startTime])
   @@map("course_schedules")
 }
 
