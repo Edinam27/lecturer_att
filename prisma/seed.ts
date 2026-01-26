@@ -3,7 +3,7 @@ import { hashPassword } from '../src/lib/auth'
 
 const prisma = new PrismaClient()
 
-async function main() {
+export async function seed() {
   console.log('🌱 Seeding database with comprehensive test data...')
 
   // Create admin users
@@ -696,11 +696,13 @@ async function main() {
   console.log(`- Attendance records for past 8 weeks created`)
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Error seeding database:', e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+if (require.main === module) {
+  seed()
+    .catch((e) => {
+      console.error('❌ Error seeding database:', e)
+      process.exit(1)
+    })
+    .finally(async () => {
+      await prisma.$disconnect()
+    })
+}
