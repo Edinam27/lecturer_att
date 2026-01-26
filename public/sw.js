@@ -353,22 +353,81 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // IndexedDB helpers for offline storage
+const DB_NAME = 'upsa-attendance-db';
+const DB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
 async function getPendingAttendanceRecords() {
-  // Implementation would use IndexedDB to store/retrieve pending records
-  return [];
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['pendingAttendance'], 'readonly');
+      const store = transaction.objectStore('pendingAttendance');
+      const request = store.getAll();
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error getting pending attendance records:', error);
+    return [];
+  }
 }
 
 async function removePendingAttendanceRecord(id) {
-  // Implementation would remove record from IndexedDB
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['pendingAttendance'], 'readwrite');
+      const store = transaction.objectStore('pendingAttendance');
+      const request = store.delete(id);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error removing pending attendance record:', error);
+  }
 }
 
 async function getPendingVerifications() {
-  // Implementation would use IndexedDB to store/retrieve pending verifications
-  return [];
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['pendingVerifications'], 'readonly');
+      const store = transaction.objectStore('pendingVerifications');
+      const request = store.getAll();
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error getting pending verifications:', error);
+    return [];
+  }
 }
 
 async function removePendingVerification(id) {
-  // Implementation would remove verification from IndexedDB
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['pendingVerifications'], 'readwrite');
+      const store = transaction.objectStore('pendingVerifications');
+      const request = store.delete(id);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error removing pending verification:', error);
+  }
 }
 
 // Message handling for communication with main thread

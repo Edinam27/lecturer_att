@@ -627,8 +627,7 @@ async function main() {
   }
 
   // Create realistic attendance records for the past few weeks
-  // NOTE: Hardcoded date to ensure data is generated for 2025 even if local system date is incorrect (e.g. 2026)
-  const today = new Date('2025-01-24')
+  const today = new Date()
   const attendanceRecords = []
   
   for (const schedule of createdSchedules) {

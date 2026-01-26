@@ -25,8 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate date ranges
-    // Hardcoded date to match seed data (2025-01-24)
-    const now = new Date('2025-01-24T12:00:00Z');
+    const now = new Date();
     let startDate: Date;
     let endDate = now;
 
@@ -97,8 +96,12 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Analytics API error:', error);
+    // Log stack trace if available
+    if (error instanceof Error) {
+      console.error(error.stack);
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch analytics data' },
+      { error: 'Failed to fetch analytics data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -175,9 +178,10 @@ async function getOverviewAnalytics(filter: any, userRole: string) {
 async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Date) {
   // Daily attendance trends
   // Note: Using Prisma's queryRaw for complex aggregation
+  // Using ::date cast for PostgreSQL compatibility
   const dailyTrends = await prisma.$queryRawUnsafe(`
     SELECT 
-      DATE(ar.timestamp) as day,
+      ar.timestamp::date as day,
       COUNT(*) as total,
       SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
       SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed,
@@ -187,44 +191,50 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
     WHERE ar.timestamp >= '${startDate.toISOString()}' AND ar.timestamp <= '${endDate.toISOString()}'
     ${filter.lecturerId ? `AND ar.lecturer_id = '${filter.lecturerId}'` : ''}
     ${filter.courseSchedule?.classGroupId ? `AND cs.class_group_id = '${filter.courseSchedule.classGroupId}'` : ''}
-    GROUP BY DATE(ar.timestamp)
+    GROUP BY ar.timestamp::date
     ORDER BY day
   `);
 
-  // Session type distribution
-  const sessionTypes = await prisma.attendanceRecord.groupBy({
-    by: ['method'],
-    where: filter,
-    _count: { method: true }
-  });
+  // Fix BigInt serialization for raw queries
+  const serializedDailyTrends = JSON.parse(JSON.stringify(dailyTrends, (key, value) =>
+      typeof value === 'bigint'
+        ? Number(value)
+        : value
+    ));
 
-  // Location accuracy analysis
-  const locationAccuracy = await prisma.attendanceRecord.groupBy({
-    by: ['locationAccuracy'],
-    where: { ...filter, locationAccuracy: { not: null } },
-    _count: { locationAccuracy: true },
-    _avg: { locationAccuracy: true }
-  });
+    const sessionTypes = await prisma.attendanceRecord.groupBy({
+      by: ['method'],
+      where: filter,
+      _count: { method: true }
+    });
 
-  return NextResponse.json({
-    dailyTrends,
-    sessionTypes: sessionTypes.map(st => ({
-      type: st.method,
-      count: st._count.method
-    })),
-    locationAccuracy: {
-      distribution: locationAccuracy,
-      averageAccuracy: locationAccuracy.reduce((acc, curr) => 
-        acc + (curr._avg.locationAccuracy || 0), 0) / locationAccuracy.length || 0
-    }
-  });
-}
+    // Location accuracy analysis
+    const locationAccuracy = await prisma.attendanceRecord.groupBy({
+      by: ['locationAccuracy'],
+      where: { ...filter, locationAccuracy: { not: null } },
+      _count: { locationAccuracy: true },
+      _avg: { locationAccuracy: true }
+    });
+
+    return NextResponse.json({
+      dailyTrends: serializedDailyTrends,
+      sessionTypes: sessionTypes.map(st => ({
+        type: st.method,
+        count: st._count.method
+      })),
+      locationAccuracy: {
+        distribution: locationAccuracy,
+        averageAccuracy: locationAccuracy.reduce((acc, curr) => 
+          acc + (curr._avg.locationAccuracy || 0), 0) / locationAccuracy.length || 0
+      }
+    });
+  }
 
 async function getVerificationAnalytics(filter: any, startDate: Date, endDate: Date) {
   // Verification trends over time
   const verificationTrends = await prisma.$queryRawUnsafe(`
     SELECT 
-      DATE(ar.updated_at) as day,
+      ar.updated_at::date as day,
       COUNT(*) as total,
       SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
       SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed
@@ -234,7 +244,7 @@ async function getVerificationAnalytics(filter: any, startDate: Date, endDate: D
     AND ar.supervisor_verified IS NOT NULL
     ${filter.lecturerId ? `AND ar.lecturer_id = '${filter.lecturerId}'` : ''}
     ${filter.courseSchedule?.classGroupId ? `AND cs.class_group_id = '${filter.courseSchedule.classGroupId}'` : ''}
-    GROUP BY DATE(ar.updated_at)
+    GROUP BY ar.updated_at::date
     ORDER BY day
   `);
 

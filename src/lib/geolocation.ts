@@ -60,15 +60,16 @@ export function getUPSARadius(): number {
 }
 
 // Validate coordinates format
-export function isValidCoordinates(coordinates: any): coordinates is Coordinates {
-  return (
-    typeof coordinates === 'object' &&
-    coordinates !== null &&
-    typeof coordinates.latitude === 'number' &&
-    typeof coordinates.longitude === 'number' &&
-    coordinates.latitude >= -90 &&
-    coordinates.latitude <= 90 &&
-    coordinates.longitude >= -180 &&
-    coordinates.longitude <= 180
-  )
+export function isLocationValid(
+  lat1: number, 
+  lon1: number, 
+  lat2: number, 
+  lon2: number, 
+  radiusMeters: number
+): boolean {
+  const distance = getDistance(
+    { latitude: lat1, longitude: lon1 }, 
+    { latitude: lat2, longitude: lon2 }
+  );
+  return distance <= radiusMeters;
 }

@@ -23,9 +23,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Hardcoded date for testing: Friday 2025-01-24 at 10:00 AM
-    // This ensures we match the "Friday" schedules added in seed.ts
-    const now = new Date('2025-01-24T10:00:00Z');
+    // Use current date instead of hardcoded date
+    const now = new Date();
     const dayOfWeek = now.getDay(); // 5 (Friday)
     
     // Convert time to minutes for comparison

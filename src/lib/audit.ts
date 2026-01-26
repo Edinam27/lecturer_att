@@ -177,11 +177,11 @@ export class AuditService {
       // Daily activity
       prisma.$queryRaw`
         SELECT 
-          DATE(timestamp) as date,
+          timestamp::date as date,
           COUNT(*) as count
         FROM audit_logs 
         WHERE timestamp >= ${startDate}
-        GROUP BY DATE(timestamp)
+        GROUP BY timestamp::date
         ORDER BY date
       ` as { date: string; count: bigint }[],
       
