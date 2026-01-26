@@ -6,6 +6,15 @@ const prisma = new PrismaClient()
 export async function seed() {
   console.log('🌱 Seeding database with comprehensive test data...')
 
+  // Clean up existing transactional data to prevent duplicates
+  console.log('🧹 Cleaning up existing transactional data...')
+  await prisma.attendanceRecord.deleteMany()
+  await prisma.virtualSession.deleteMany()
+  await prisma.supervisorLog.deleteMany()
+  await prisma.verificationRequest.deleteMany()
+  await prisma.courseSchedule.deleteMany()
+  console.log('✅ Cleaned up transactional data')
+
   // Create admin users
   const adminPassword = await hashPassword('admin123')
   const admin = await prisma.user.upsert({
