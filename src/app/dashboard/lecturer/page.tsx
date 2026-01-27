@@ -35,13 +35,7 @@ const lecturerCards: DashboardCard[] = [
     color: 'bg-purple-500',
     icon: 'document-text'
   },
-  {
-    title: 'My Courses',
-    description: 'View courses you are teaching',
-    href: '/dashboard/courses',
-    color: 'bg-yellow-500',
-    icon: 'book-open'
-  },
+
   {
     title: 'Claim Form',
     description: 'Generate and print your claim form',
