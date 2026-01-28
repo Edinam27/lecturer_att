@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    // Use simulated date for testing/demo purposes
-    const today = new Date('2025-01-24T12:00:00Z')
+    const today = new Date()
     const todayDayOfWeek = today.getUTCDay()
     
     const startOfDay = new Date(today)

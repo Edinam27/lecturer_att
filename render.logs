@@ -1,0 +1,50 @@
+2026-01-28T15:34:40.26900551Z Prisma schema loaded from prisma/schema.prisma
+2026-01-28T15:34:40.273853639Z warn Preview feature "driverAdapters" is deprecated. The functionality can be used without specifying it as a preview feature.
+2026-01-28T15:34:41.365472983Z 
+2026-01-28T15:34:41.365493504Z ✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 890ms
+2026-01-28T15:34:41.365496664Z 
+2026-01-28T15:34:41.365499724Z Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+2026-01-28T15:34:41.365502364Z 
+2026-01-28T15:34:41.365505244Z Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+2026-01-28T15:34:41.365507854Z 
+2026-01-28T15:34:41.393270701Z 
+2026-01-28T15:34:41.393292591Z added 8 packages, and audited 985 packages in 4s
+2026-01-28T15:34:41.393295981Z 
+2026-01-28T15:34:41.393304502Z 192 packages are looking for funding
+2026-01-28T15:34:41.393365623Z   run `npm fund` for details
+2026-01-28T15:34:41.425068165Z 
+2026-01-28T15:34:41.425093005Z 2 vulnerabilities (1 moderate, 1 high)
+2026-01-28T15:34:41.425097465Z 
+2026-01-28T15:34:41.425101665Z To address issues that do not require attention, run:
+2026-01-28T15:34:41.425105795Z   npm audit fix
+2026-01-28T15:34:41.425109695Z 
+2026-01-28T15:34:41.425113476Z Some issues need review, and may require choosing
+2026-01-28T15:34:41.425118236Z a different dependency.
+2026-01-28T15:34:41.425121936Z 
+2026-01-28T15:34:41.425126366Z Run `npm audit` for details.
+2026-01-28T15:34:41.707551179Z 
+2026-01-28T15:34:41.70757812Z > upsa-attendance-system@0.1.0 build
+2026-01-28T15:34:41.70758365Z > next build
+2026-01-28T15:34:41.70758792Z 
+2026-01-28T15:34:42.636515045Z ▲ Next.js 16.1.4 (Turbopack)
+2026-01-28T15:34:42.636772561Z 
+2026-01-28T15:34:42.67402318Z   Creating an optimized production build ...
+2026-01-28T15:35:07.455914981Z 
+2026-01-28T15:35:07.455953412Z > Build error occurred
+2026-01-28T15:35:07.458858508Z Error: Turbopack build failed with 1 errors:
+2026-01-28T15:35:07.458867569Z ./src/app/api/attendance/verify/route.ts:250:23
+2026-01-28T15:35:07.458872239Z Ecmascript file had an error
+2026-01-28T15:35:07.458876239Z   248 |
+2026-01-28T15:35:07.458882229Z   249 | // GET endpoint to fetch pending verifications for supervisor
+2026-01-28T15:35:07.458888739Z > 250 | export async function GET(request: NextRequest) {
+2026-01-28T15:35:07.45889518Z       |                       ^^^
+2026-01-28T15:35:07.45891555Z   251 |   try {
+2026-01-28T15:35:07.45891877Z   252 |     const session = await getServerSession(authOptions)
+2026-01-28T15:35:07.45892094Z   253 |     
+2026-01-28T15:35:07.45892289Z 
+2026-01-28T15:35:07.45892507Z the name `GET` is defined multiple times
+2026-01-28T15:35:07.45892706Z 
+2026-01-28T15:35:07.458929041Z 
+2026-01-28T15:35:07.45893157Z     at <unknown> (./src/app/api/attendance/verify/route.ts:250:23)
+2026-01-28T15:35:07.651712624Z ==> Build failed 😞
+2026-01-28T15:35:07.651730244Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys

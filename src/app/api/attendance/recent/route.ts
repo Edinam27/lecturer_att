@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
             sessionType: true,
             course: {
               select: {
-                code: true,
+                courseCode: true,
                 title: true,
                 programme: {
                   select: {
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
           ? `${record.courseSchedule.classroom.building.name} - ${record.courseSchedule.classroom.name}`
           : 'Virtual',
         course: {
-          code: record.courseSchedule.course.code,
+          code: record.courseSchedule.course.courseCode,
           name: record.courseSchedule.course.title,
           programme: {
             name: record.courseSchedule.course.programme.name

@@ -94,7 +94,7 @@ export function Navigation() {
     if (isSigningOut) return // Prevent multiple clicks
     setIsSigningOut(true)
     try {
-      await signOut()
+      await signOut({ callbackUrl: '/auth/signin' })
     } catch (error) {
       setIsSigningOut(false) // Reset on error
     }

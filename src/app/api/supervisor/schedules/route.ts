@@ -12,9 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use simulated date for testing/demo purposes
-    // Hardcoded to Friday 2025-01-24 as per project requirements
-    const today = new Date('2025-01-24T12:00:00Z') // Set to noon UTC to avoid timezone edge cases
+    // Use current date
+    const today = new Date()
     const todayDayOfWeek = today.getUTCDay()
     
     const startOfDay = new Date(today)

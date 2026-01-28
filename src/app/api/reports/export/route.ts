@@ -20,8 +20,7 @@ export async function GET(request: NextRequest) {
     const lecturerId = searchParams.get('lecturerId') // For individual lecturer filtering
 
     // Calculate date range
-    // Hardcoded date to match seed data (2025-01-24)
-    const now = new Date('2025-01-24T12:00:00Z')
+    const now = new Date()
     let startDate: Date
     let endDate: Date
 

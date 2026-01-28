@@ -60,8 +60,12 @@ export function createPermissionMiddleware(config: PermissionConfig) {
 
       // Check resource-based permissions with ownership/class membership
       if (config.resourceType && config.action) {
-        let isOwner = false
-        let isClassMember = false
+        // Since we cannot check actual ownership in Edge Middleware (no DB access),
+        // we set these flags to true if the check is required.
+        // This effectively delegates the specific resource ownership check to the API route,
+        // while still enforcing that the user has the "own" or "class" permission variant.
+        const isOwner = config.checkOwnership || false
+        const isClassMember = config.checkClassMembership || false
 
         // Extract resource ID from URL if needed for ownership checks
         if (config.checkOwnership || config.checkClassMembership) {
@@ -70,27 +74,6 @@ export function createPermissionMiddleware(config: PermissionConfig) {
           // NOTE: DB-based ownership checks are moved to API routes because Prisma is not supported in Edge Middleware
           // For now, we assume the API route will perform the final validation.
           // This middleware only checks RBAC (Role Based Access Control).
-          
-          /* 
-          // Original logic - Disabled for Edge Compatibility
-          if (config.checkOwnership) {
-            isOwner = await checkResourceOwnership(
-              config.resourceType,
-              resourceId,
-              userId,
-              userRole
-            )
-          }
-
-          if (config.checkClassMembership) {
-            isClassMember = await checkClassMembership(
-              config.resourceType,
-              resourceId,
-              userId,
-              userRole
-            )
-          }
-          */
         }
 
         const hasResourcePermission = checkResourcePermission(

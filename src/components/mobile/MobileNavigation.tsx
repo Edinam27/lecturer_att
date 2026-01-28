@@ -46,6 +46,7 @@ export default function MobileNavigation() {
   );
 
   const handleSignOut = async () => {
+    setIsMenuOpen(false);
     await signOut({ callbackUrl: '/auth/signin' });
   };
 

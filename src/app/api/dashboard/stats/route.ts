@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id
 
     // Get current week date range (UTC)
-    // Use simulated date for testing/demo purposes
-    const now = new Date('2025-01-24T12:00:00Z')
+    const now = new Date()
     const day = now.getUTCDay()
     const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
     

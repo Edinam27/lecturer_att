@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
     const deviceFingerprint = generateDeviceFingerprint(userAgent, ipAddress)
 
     // Check if attendance already recorded today
-    // Use simulated date for testing/demo purposes
-    const today = new Date('2025-01-24T12:00:00Z')
+    // Use current date
+    const today = new Date()
     
     // Create simulated timestamp preserving current time
     const now = new Date()

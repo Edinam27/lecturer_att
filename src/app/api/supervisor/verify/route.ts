@@ -19,15 +19,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if a log already exists for today (optional, but good to prevent duplicates)
-    // Hardcoded date to match seed data (2025-01-24)
-    const today = new Date('2025-01-24T12:00:00Z')
+    // Use current date
+    const today = new Date()
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
     
-    // Create a timestamp that combines the simulated date with the current time
+    // Create a timestamp
     const now = new Date();
-    const currentCheckInTime = new Date(today);
-    currentCheckInTime.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+    const currentCheckInTime = new Date(now);
 
     const existingLog = await prisma.supervisorLog.findFirst({
       where: {

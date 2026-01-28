@@ -30,10 +30,8 @@ export function verifyTimeWindow(scheduledStartTime: string, scheduledEndTime: s
   error?: string
 } {
   try {
-    // Use simulated date for testing (2025-01-24)
-    // In production, this would be: const now = new Date()
-    const realNow = new Date()
-    const now = new Date(`2025-01-24T${realNow.toISOString().split('T')[1]}`)
+    // Use current date
+    const now = new Date()
     const today = now.toISOString().split('T')[0]
     
     const scheduledStart = new Date(`${today}T${scheduledStartTime}`)

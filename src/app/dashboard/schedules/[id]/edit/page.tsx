@@ -139,6 +139,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         startTime: scheduleData.startTime || '',
         endTime: scheduleData.endTime || '',
         sessionType: scheduleData.sessionType || 'LECTURE',
+        isActive: true, // Default to true as it's not currently in schema
       });
 
       // Fetch all required data
