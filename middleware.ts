@@ -141,8 +141,8 @@ const ROUTE_PERMISSIONS: Array<{
   {
     pattern: /^\/api\/attendance\/recent/,
     middleware: createPermissionMiddleware({
-      customCheck: async (session) => {
-        return ['ADMIN', 'COORDINATOR', 'LECTURER'].includes(session.user.role)
+      customCheck: async (token) => {
+        return ['ADMIN', 'COORDINATOR', 'LECTURER'].includes(token.role)
       }
     })
   },

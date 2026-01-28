@@ -265,22 +265,22 @@ export const middlewareConfigs = {
 
   // Admin or Coordinator access
   adminOrCoordinator: {
-    customCheck: async (session: any) => {
-      return ['ADMIN', 'COORDINATOR'].includes(session.user.role)
+    customCheck: async (token: any) => {
+      return ['ADMIN', 'COORDINATOR'].includes(token.role)
     }
   },
 
   // Supervisor only access
   supervisorOnly: {
-    customCheck: async (session: any) => {
-      return session.user.role === 'SUPERVISOR' || session.user.role === 'ADMIN'
+    customCheck: async (token: any) => {
+      return token.role === 'SUPERVISOR' || token.role === 'ADMIN'
     }
   },
 
   // Online Supervisor only access
   onlineSupervisorOnly: {
-    customCheck: async (session: any) => {
-      return session.user.role === 'ONLINE_SUPERVISOR' || session.user.role === 'ADMIN'
+    customCheck: async (token: any) => {
+      return token.role === 'ONLINE_SUPERVISOR' || token.role === 'ADMIN'
     }
   },
 
