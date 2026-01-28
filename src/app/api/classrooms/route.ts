@@ -53,18 +53,20 @@ export async function GET(request: NextRequest) {
     // Format the response
     const formattedClassrooms = classrooms.map(classroom => ({
       id: classroom.id,
+      roomCode: classroom.roomCode,
       name: classroom.name,
       capacity: classroom.capacity,
-      type: classroom.type,
-      equipment: classroom.equipment,
-      isActive: classroom.isActive,
-      // createdAt: classroom.createdAt, // Removed as it does not exist in schema
+      roomType: classroom.roomType,
+      equipmentList: classroom.equipmentList,
+      availabilityStatus: classroom.availabilityStatus,
+      virtualLink: classroom.virtualLink,
       building: {
         id: classroom.building.id,
         name: classroom.building.name,
+        code: classroom.building.code,
         address: classroom.building.address,
-        latitude: classroom.building.latitude,
-        longitude: classroom.building.longitude
+        gpsLatitude: classroom.building.gpsLatitude,
+        gpsLongitude: classroom.building.gpsLongitude
       },
       scheduleCount: classroom._count.courseSchedules
     }));
@@ -102,24 +104,28 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
+      roomCode,
       name,
       capacity,
-      type,
-      equipment,
+      roomType,
+      equipmentList,
       buildingId,
-      isActive = true
+      availabilityStatus = 'available',
+      virtualLink,
+      gpsLatitude,
+      gpsLongitude
     } = body;
 
     // Validate required fields
-    if (!name || !capacity || !buildingId) {
+    if (!roomCode || !name || !buildingId) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: roomCode, name, buildingId' },
         { status: 400 }
       );
     }
 
-    // Validate capacity is a positive number
-    if (capacity <= 0) {
+    // Validate capacity if provided
+    if (capacity && capacity <= 0) {
       return NextResponse.json(
         { error: 'Capacity must be a positive number' },
         { status: 400 }
@@ -138,36 +144,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if classroom roomCode already exists (globally unique)
+    const existingClassroomByCode = await prisma.classroom.findUnique({
+      where: { roomCode }
+    });
+
+    if (existingClassroomByCode) {
+      return NextResponse.json(
+        { error: 'Classroom with this room code already exists' },
+        { status: 409 }
+      );
+    }
+
     // Check if classroom name already exists in the same building
-    const existingClassroom = await prisma.classroom.findFirst({
+    // Note: Schema doesn't enforce this, but it's good practice
+    const existingClassroomByName = await prisma.classroom.findFirst({
       where: {
         name,
         buildingId
       }
     });
 
-    if (existingClassroom) {
+    if (existingClassroomByName) {
       return NextResponse.json(
         { error: 'Classroom name already exists in this building' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
     // Create classroom
     const classroom = await prisma.classroom.create({
       data: {
+        roomCode,
         name,
-        capacity,
-        type: type || null,
-        equipment: equipment || null,
+        capacity: capacity ? parseInt(capacity) : null,
+        roomType: roomType || null,
+        equipmentList: equipmentList || null,
         buildingId,
-        isActive
+        availabilityStatus,
+        virtualLink: virtualLink || null,
+        gpsLatitude: gpsLatitude ? parseFloat(gpsLatitude) : null,
+        gpsLongitude: gpsLongitude ? parseFloat(gpsLongitude) : null
       },
       include: {
         building: {
           select: {
             id: true,
             name: true,
+            code: true,
             address: true,
             gpsLatitude: true,
             gpsLongitude: true
@@ -180,16 +204,20 @@ export async function POST(request: NextRequest) {
       message: 'Classroom created successfully',
       classroom: {
         id: classroom.id,
+        roomCode: classroom.roomCode,
         name: classroom.name,
         capacity: classroom.capacity,
-        type: classroom.type,
-        equipment: classroom.equipment,
-        isActive: classroom.isActive,
-        // createdAt: classroom.createdAt, // Removed as it does not exist in schema
+        roomType: classroom.roomType,
+        equipmentList: classroom.equipmentList,
+        availabilityStatus: classroom.availabilityStatus,
+        virtualLink: classroom.virtualLink,
         building: {
-          ...classroom.building,
-          latitude: classroom.building.gpsLatitude,
-          longitude: classroom.building.gpsLongitude
+          id: classroom.building.id,
+          name: classroom.building.name,
+          code: classroom.building.code,
+          address: classroom.building.address,
+          gpsLatitude: classroom.building.gpsLatitude,
+          gpsLongitude: classroom.building.gpsLongitude
         }
       }
     }, { status: 201 });

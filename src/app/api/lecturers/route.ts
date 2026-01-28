@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
       employeeId,
       department,
       specialization,
+      rank,
       isAdjunct,
       isOverload
     } = body;
@@ -197,8 +198,9 @@ export async function POST(request: NextRequest) {
             employeeId,
             department: department || null,
             specialization: specialization || null,
-            // isAdjunct: Boolean(isAdjunct), // Temporarily disabled
-            // isOverload: Boolean(isOverload) // Temporarily disabled
+            rank: rank || null,
+            isAdjunct: Boolean(isAdjunct),
+            isOverload: Boolean(isOverload)
           }
         }
       },

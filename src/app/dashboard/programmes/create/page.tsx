@@ -8,9 +8,10 @@ import Link from 'next/link'
 interface FormData {
   name: string
   level: string
-  duration: number
+  durationSemesters: number
   description: string
   coordinatorId: string
+  deliveryModes: string[]
 }
 
 export default function CreateProgrammePage() {
@@ -22,9 +23,10 @@ export default function CreateProgrammePage() {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     level: 'BACHELOR',
-    duration: 4,
+    durationSemesters: 4,
     description: '',
-    coordinatorId: ''
+    coordinatorId: '',
+    deliveryModes: ['Face-to-Face']
   })
 
   useEffect(() => {
@@ -67,7 +69,10 @@ export default function CreateProgrammePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          deliveryModes: JSON.stringify(formData.deliveryModes)
+        }),
       })
 
       if (!response.ok) {
@@ -167,14 +172,14 @@ export default function CreateProgrammePage() {
             </div>
 
             <div className="sm:col-span-1">
-              <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="durationSemesters" className="block text-sm font-medium text-gray-700 mb-1">
                 Duration (Semesters) *
               </label>
               <input
                 type="number"
-                id="duration"
-                name="duration"
-                value={formData.duration}
+                id="durationSemesters"
+                name="durationSemesters"
+                value={formData.durationSemesters}
                 onChange={handleChange}
                 required
                 min="1"

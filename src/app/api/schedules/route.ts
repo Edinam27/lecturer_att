@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
   }
 
     const body = await request.json()
+    console.log('[API] Creating schedule with body:', JSON.stringify(body, null, 2))
+
     const {
       courseId,
       classGroupId,
@@ -28,6 +30,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Explicitly cast and validate types to prevent Prisma/Driver errors
+    let dayOfWeekInt: number;
+    if (typeof dayOfWeek === 'string') {
+      dayOfWeekInt = parseInt(dayOfWeek, 10);
+    } else if (typeof dayOfWeek === 'number') {
+      dayOfWeekInt = dayOfWeek;
+    } else {
+      console.error('[API] Invalid dayOfWeek type:', typeof dayOfWeek, dayOfWeek);
+      return NextResponse.json({ error: 'Invalid dayOfWeek type' }, { status: 400 });
+    }
+
+    if (isNaN(dayOfWeekInt)) {
+       console.error('[API] Invalid dayOfWeek value (NaN):', dayOfWeek);
+       return NextResponse.json({ error: 'Invalid dayOfWeek value' }, { status: 400 });
+    }
+
+    const startTimeStr = String(startTime)
+    const endTimeStr = String(endTime)
+    const lecturerIdStr = String(lecturerId)
+    const classGroupIdStr = String(classGroupId)
+    const classroomIdStr = classroomId ? String(classroomId) : null
+
     // Authorization check for Coordinator
     if (session.user.role === 'COORDINATOR') {
       const course = await prisma.course.findUnique({
@@ -41,166 +65,99 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for scheduling conflicts
-    const conflictingSchedule = await prisma.courseSchedule.findFirst({
-      where: {
-        dayOfWeek,
-        OR: [
-          {
-            lecturerId,
-            OR: [
-              {
-                AND: [
-                  { startTime: { lte: startTime } },
-                  { endTime: { gt: startTime } }
-                ]
-              },
-              {
-                AND: [
-                  { startTime: { lt: endTime } },
-                  { endTime: { gte: endTime } }
-                ]
-              },
-              {
-                AND: [
-                  { startTime: { gte: startTime } },
-                  { endTime: { lte: endTime } }
-                ]
-              }
-            ]
-          },
-          classroomId ? {
-            classroomId,
-            OR: [
-              {
-                AND: [
-                  { startTime: { lte: startTime } },
-                  { endTime: { gt: startTime } }
-                ]
-              },
-              {
-                AND: [
-                  { startTime: { lt: endTime } },
-                  { endTime: { gte: endTime } }
-                ]
-              },
-              {
-                AND: [
-                  { startTime: { gte: startTime } },
-                  { endTime: { lte: endTime } }
-                ]
-              }
-            ]
-          } : {}
+    // Time overlap logic: (StartA <= StartB AND EndA > StartB) OR (StartA < EndB AND EndA >= EndB) OR (StartA >= StartB AND EndA <= EndB)
+    const timeConflictConditions = [
+      {
+        AND: [
+          { startTime: { lte: startTimeStr } },
+          { endTime: { gt: startTimeStr } }
+        ]
+      },
+      {
+        AND: [
+          { startTime: { lt: endTimeStr } },
+          { endTime: { gte: endTimeStr } }
+        ]
+      },
+      {
+        AND: [
+          { startTime: { gte: startTimeStr } },
+          { endTime: { lte: endTimeStr } }
         ]
       }
-    })
+    ]
 
-    if (conflictingSchedule) {
-      return NextResponse.json({ error: 'Schedule conflict detected' }, { status: 409 })
+    console.log('[API] Checking conflicts separately for day:', dayOfWeekInt);
+
+    // 1. Check Lecturer Conflict
+    const lecturerConflict = await prisma.courseSchedule.findFirst({
+      where: {
+        dayOfWeek: dayOfWeekInt,
+        lecturerId: lecturerIdStr,
+        OR: [...timeConflictConditions]
+      }
+    });
+
+    if (lecturerConflict) {
+       console.log('[API] Lecturer conflict found:', lecturerConflict.id);
+       return NextResponse.json({ 
+         error: 'Scheduling conflict: The lecturer is already booked for this time slot.' 
+       }, { status: 409 });
     }
 
-    // Create the schedule
+    // 2. Check Class Group Conflict
+    const classGroupConflict = await prisma.courseSchedule.findFirst({
+      where: {
+        dayOfWeek: dayOfWeekInt,
+        classGroupId: classGroupIdStr,
+        OR: [...timeConflictConditions]
+      }
+    });
+
+    if (classGroupConflict) {
+       console.log('[API] Class Group conflict found:', classGroupConflict.id);
+       return NextResponse.json({ 
+         error: 'Scheduling conflict: The class group is already booked for this time slot.' 
+       }, { status: 409 });
+    }
+
+    // 3. Check Classroom Conflict (if applicable)
+    if (classroomIdStr) {
+      const classroomConflict = await prisma.courseSchedule.findFirst({
+        where: {
+          dayOfWeek: dayOfWeekInt,
+          classroomId: classroomIdStr,
+          OR: [...timeConflictConditions]
+        }
+      });
+
+      if (classroomConflict) {
+         console.log('[API] Classroom conflict found:', classroomConflict.id);
+         return NextResponse.json({ 
+           error: 'Scheduling conflict: The classroom is already booked for this time slot.' 
+         }, { status: 409 });
+      }
+    }
+
+    // Create schedule
     const schedule = await prisma.courseSchedule.create({
       data: {
         courseId,
-        classGroupId,
-        lecturerId,
-        classroomId: classroomId || null,
-        dayOfWeek,
-        startTime,
-        endTime,
+        classGroupId: classGroupIdStr,
+        lecturerId: lecturerIdStr,
+        classroomId: classroomIdStr,
+        dayOfWeek: dayOfWeekInt,
+        startTime: startTimeStr,
+        endTime: endTimeStr,
         sessionType
-      },
-      select: {
-        id: true,
-        dayOfWeek: true,
-        startTime: true,
-        endTime: true,
-        sessionType: true,
-        course: {
-          select: {
-            id: true,
-            courseCode: true,
-            title: true,
-            creditHours: true,
-            programme: {
-              select: {
-                name: true,
-                level: true
-              }
-            }
-          }
-        },
-        classGroup: {
-          select: {
-            id: true,
-            name: true,
-            admissionYear: true
-          }
-        },
-        lecturer: {
-          select: {
-            id: true,
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
-            }
-          }
-        },
-        classroom: {
-          select: {
-            name: true,
-            building: {
-              select: {
-                name: true
-              }
-            }
-          }
-        }
       }
     })
 
-    const formattedSchedule = {
-      id: schedule.id,
-      dayOfWeek: schedule.dayOfWeek,
-      startTime: schedule.startTime,
-      endTime: schedule.endTime,
-      sessionType: schedule.sessionType,
-      venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
-      isActive: true,
-      course: {
-        id: schedule.course.id,
-        code: schedule.course.courseCode,
-        name: schedule.course.title,
-        credits: schedule.course.creditHours,
-        programme: {
-          name: schedule.course.programme.name,
-          level: schedule.course.programme.level
-        }
-      },
-      classGroup: {
-        id: schedule.classGroup.id,
-        name: schedule.classGroup.name,
-        academicYear: schedule.classGroup.admissionYear.toString()
-      },
-      lecturer: {
-        id: schedule.lecturer.id,
-        firstName: schedule.lecturer.user.firstName,
-        lastName: schedule.lecturer.user.lastName,
-        email: schedule.lecturer.user.email
-      }
-    }
-
-    return NextResponse.json(formattedSchedule, { status: 201 })
+    console.log('[API] Schedule created successfully:', schedule.id)
+    return NextResponse.json(schedule)
   } catch (error) {
     console.error('Error creating schedule:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

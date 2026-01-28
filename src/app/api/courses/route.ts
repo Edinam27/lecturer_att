@@ -86,15 +86,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if course already exists
-    const existingCourse = await prisma.course.findFirst({
+    const existingCourse = await prisma.course.findUnique({
       where: {
-        courseCode,
-        programmeId
+        courseCode
       }
     })
 
     if (existingCourse) {
-      return NextResponse.json({ error: 'Course with this code already exists in this programme' }, { status: 400 })
+      return NextResponse.json({ error: 'Course with this code already exists' }, { status: 409 })
     }
 
     const course = await prisma.course.create({

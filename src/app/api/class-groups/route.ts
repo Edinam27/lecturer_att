@@ -76,9 +76,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: name, programmeId, admissionYear' }, { status: 400 })
     }
 
-    // Check if class group name already exists
+    // Check if class group name already exists for this programme and year
     const existingGroup = await prisma.classGroup.findFirst({
-      where: { name }
+      where: {
+        name,
+        programmeId,
+        admissionYear: parseInt(admissionYear)
+      }
     })
 
     if (existingGroup) {

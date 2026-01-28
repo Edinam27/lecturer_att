@@ -135,7 +135,8 @@ export default function CreateSchedulePage() {
       // Convert dayOfWeek to number for API
       const submitData = {
         ...formData,
-        dayOfWeek: parseInt(formData.dayOfWeek)
+        dayOfWeek: parseInt(formData.dayOfWeek),
+        classroomId: formData.classroomId || null
       }
 
       const response = await fetch('/api/schedules', {

@@ -34,6 +34,7 @@ export default function MobileNavigation() {
   const pathname = usePathname();
   const { isOnline, pendingSyncCount, hasUpdate, canInstall, installPWA } = usePWA();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Don't show navigation on auth pages
   if (pathname.startsWith('/auth/')) {
@@ -46,8 +47,14 @@ export default function MobileNavigation() {
   );
 
   const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
     setIsMenuOpen(false);
-    await signOut({ callbackUrl: '/auth/signin' });
+    try {
+      await signOut({ callbackUrl: '/auth/signin' });
+    } catch (error) {
+      setIsSigningOut(false);
+    }
   };
 
   const isActive = (href: string) => {

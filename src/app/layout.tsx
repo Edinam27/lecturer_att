@@ -79,14 +79,11 @@ export default async function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         
         {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167x167.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         
         {/* Favicon */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         
         {/* Apple Splash Screens */}

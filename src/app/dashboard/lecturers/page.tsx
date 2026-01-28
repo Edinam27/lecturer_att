@@ -58,6 +58,7 @@ export default function LecturersPage() {
     isOverload: false,
     isActive: true
   })
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -89,6 +90,7 @@ export default function LecturersPage() {
   }
 
   const handleAddLecturer = async () => {
+    setFormError(null)
     try {
       const response = await fetch('/api/lecturers', {
         method: 'POST',
@@ -105,12 +107,13 @@ export default function LecturersPage() {
       resetForm()
       fetchLecturers()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'An error occurred')
+      setFormError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 
   const handleEditLecturer = async () => {
     if (!currentLecturer) return
+    setFormError(null)
 
     try {
       const response = await fetch(`/api/lecturers/${currentLecturer.id}`, {
@@ -137,7 +140,7 @@ export default function LecturersPage() {
       resetForm()
       fetchLecturers()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'An error occurred')
+      setFormError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
 
@@ -198,6 +201,7 @@ export default function LecturersPage() {
   }
 
   const openEditModal = (lecturer: Lecturer) => {
+    setFormError(null)
     setCurrentLecturer(lecturer)
     setFormData({
       firstName: lecturer.user.firstName,
@@ -215,6 +219,7 @@ export default function LecturersPage() {
   }
 
   const resetForm = () => {
+    setFormError(null)
     setFormData({
       firstName: '',
       lastName: '',
@@ -393,6 +398,11 @@ export default function LecturersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {formError && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+                {formError}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
@@ -456,6 +466,11 @@ export default function LecturersPage() {
             <DialogTitle>Edit Lecturer</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {formError && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+                {formError}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="edit-firstName">First Name</Label>

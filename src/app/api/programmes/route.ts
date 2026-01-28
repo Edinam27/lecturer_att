@@ -58,15 +58,14 @@ export async function POST(request: NextRequest) {
     const { name, level, durationSemesters, description, deliveryModes, coordinatorId } = body
 
     // Check if programme already exists
-    const existingProgramme = await prisma.programme.findFirst({
+    const existingProgramme = await prisma.programme.findUnique({
       where: {
-        name,
-        level
+        name
       }
     })
 
     if (existingProgramme) {
-      return NextResponse.json({ error: 'Programme with this name and level already exists' }, { status: 400 })
+      return NextResponse.json({ error: 'Programme with this name already exists' }, { status: 409 })
     }
 
     const programme = await prisma.programme.create({

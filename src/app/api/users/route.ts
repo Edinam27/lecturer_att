@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import bcrypt from 'bcryptjs'
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     
     // Permission check is handled by middleware
-
+    
     const body = await request.json()
     const { firstName, lastName, email, role, password, lecturerData, classGroupIds } = body
 
@@ -81,8 +82,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 })
     }
 
-    // Hash password (you'll need to implement this)
-    const passwordHash = password // This should be hashed
+    // Hash password
+    const salt = await bcrypt.genSalt(10)
+    const passwordHash = await bcrypt.hash(password, salt)
 
     // Create user with related data
     const user = await prisma.user.create({
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
             create: {
               employeeId: lecturerData.employeeId,
               department: lecturerData.department,
-              title: lecturerData.title
+              rank: lecturerData.rank
             }
           }
         }),

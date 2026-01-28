@@ -77,6 +77,16 @@ const navigationItems: NavigationItem[] = [
     name: 'Import Data',
     href: '/dashboard/import',
     roles: ['ADMIN']
+  },
+  {
+    name: 'Buildings',
+    href: '/dashboard/buildings',
+    roles: ['ADMIN']
+  },
+  {
+    name: 'Classrooms',
+    href: '/dashboard/classrooms',
+    roles: ['ADMIN']
   }
 ]
 
