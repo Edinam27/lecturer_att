@@ -11,7 +11,7 @@ interface PermissionConfig {
   action?: string
   checkOwnership?: boolean
   checkClassMembership?: boolean
-  customCheck?: (session: any, request: NextRequest) => Promise<boolean>
+  customCheck?: (token: any, request: NextRequest) => Promise<boolean>
 }
 
 // Create permission middleware
