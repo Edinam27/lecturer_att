@@ -88,7 +88,7 @@ const ROUTE_PERMISSIONS: Array<{
 
   // Schedule routes with ownership checks
   {
-    pattern: /^\/api\/schedules\/[^/]+/,
+    pattern: /^\/api\/schedules\/(?!today)[^/]+/,
     middleware: scheduleAccessMiddleware
   },
 

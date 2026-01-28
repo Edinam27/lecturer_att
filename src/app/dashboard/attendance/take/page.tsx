@@ -59,6 +59,94 @@ export default function TakeAttendancePage() {
   // New state for editing link
   const [isEditingLink, setIsEditingLink] = useState(false)
   const [newLink, setNewLink] = useState('')
+  
+  // Diagnostics state
+  const [diagnosticLog, setDiagnosticLog] = useState<string>('')
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+
+  const runDiagnostics = async () => {
+    setShowDiagnostics(true)
+    let log = `[${new Date().toLocaleTimeString()}] Starting Diagnostics...\n`
+    log += "----------------------------------------\n"
+    
+    // 1. Check Origin
+    log += `Origin: ${window.location.origin}\n`
+    log += `Protocol: ${window.location.protocol} ${window.location.protocol === 'https:' ? '✅' : '❌'}\n`
+    log += `Secure Context: ${window.isSecureContext ? 'YES ✅' : 'NO ❌'}\n`
+    
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      log += "⚠️ CRITICAL: Geolocation requires HTTPS!\n"
+    }
+
+    // 2. Browser Support
+    const geoSupported = 'geolocation' in navigator
+    log += `Geolocation API: ${geoSupported ? 'Available ✅' : 'Missing ❌'}\n`
+
+    if (!geoSupported) {
+      log += "❌ Browser does not support Geolocation.\n"
+      setDiagnosticLog(log)
+      return
+    }
+
+    // 3. Permissions API
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        log += "Checking Permissions API...\n"
+        const result = await navigator.permissions.query({ name: 'geolocation' })
+        log += `Permission State: ${result.state.toUpperCase()}\n`
+        
+        result.onchange = () => {
+          setDiagnosticLog(prev => prev + `\n[Event] Permission changed to: ${result.state}\n`)
+        }
+      } catch (e: any) {
+        log += `Permissions API Error: ${e.message}\n`
+      }
+    } else {
+      log += "Permissions API: Not supported by browser (skipping check)\n"
+    }
+
+    // 4. Active Test
+    log += "----------------------------------------\n"
+    log += "Requesting Position (Low Accuracy)...\n"
+    setDiagnosticLog(log)
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        log += `SUCCESS! ✅\n`
+        log += `Lat: ${pos.coords.latitude.toFixed(6)}\n`
+        log += `Lng: ${pos.coords.longitude.toFixed(6)}\n`
+        log += `Accuracy: ${pos.coords.accuracy} meters\n`
+        setDiagnosticLog(log)
+      },
+      (err) => {
+        log += `FAILED ❌\n`
+        log += `Error Code: ${err.code}\n`
+        log += `Message: ${err.message}\n`
+        
+        if (err.code === 1) {
+          log += "\n[DIAGNOSIS] PERMISSION_DENIED\n"
+          log += "1. Browser blocked site?\n"
+          log += "2. OS (Windows/Mac) blocked browser?\n"
+          log += "   -> Windows: Settings > Privacy > Location\n"
+          log += "   -> Mac: System Settings > Privacy > Location Services\n"
+        } else if (err.code === 2) {
+          log += "\n[DIAGNOSIS] POSITION_UNAVAILABLE\n"
+          log += "1. GPS turned off?\n"
+          log += "2. No Wi-Fi/Network location available?\n"
+        } else if (err.code === 3) {
+          log += "\n[DIAGNOSIS] TIMEOUT\n"
+          log += "Request took too long.\n"
+        }
+        
+        setDiagnosticLog(log)
+      },
+      { 
+        enableHighAccuracy: false, 
+        timeout: 15000, 
+        maximumAge: 0 
+      }
+    )
+  }
 
   useEffect(() => {
     if (session?.user.role !== 'LECTURER') {
@@ -532,37 +620,49 @@ export default function TakeAttendancePage() {
                           <div className="mt-2">
                             <p className="text-sm text-red-600 font-medium">{locationError}</p>
                             
-                            <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-                              <p className="font-semibold mb-2">Troubleshooting Steps:</p>
-                              <ul className="list-disc pl-5 space-y-1 text-gray-700">
-                                <li>Click the lock icon 🔒 in your address bar and ensure Location is "Allowed".</li>
-                                <li>If using Windows/macOS, check System Settings &gt; Privacy &gt; Location Services.</li>
-                                <li>Try reloading the page.</li>
-                              </ul>
+                            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                              <h4 className="font-bold text-gray-800 mb-2 flex items-center">
+                                <svg className="w-4 h-4 mr-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Troubleshooting Location Issues
+                              </h4>
                               
-                              <button 
-                                onClick={() => {
-                                  if (!navigator.geolocation) return alert('Geolocation not supported');
-                                  navigator.geolocation.getCurrentPosition(
-                                    (pos) => alert(`Success! Lat: ${pos.coords.latitude}, Long: ${pos.coords.longitude}`),
-                                    (err) => alert(`Direct Error: Code ${err.code} - ${err.message}`),
-                                    { enableHighAccuracy: false, timeout: 10000 }
-                                  );
-                                }}
-                                className="mt-3 px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-xs border border-gray-300"
-                              >
-                                Test Browser Location Directly
-                              </button>
-                            </div>
+                              <div className="space-y-3 text-gray-700">
+                                <div className="p-3 bg-white rounded border border-gray-200">
+                                  <p className="font-semibold text-red-600 mb-1">Important for Windows Users:</p>
+                                  <p className="text-xs">
+                                    Even if permitted in the browser, you must enable location in 
+                                    <span className="font-bold mx-1">Settings &gt; Privacy &gt; Location</span>.
+                                    Make sure "Allow desktop apps to access your location" is ON.
+                                  </p>
+                                </div>
 
-                            {locationDiagnostics && (
-                              <details className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-500">
-                                <summary className="cursor-pointer hover:text-gray-700 font-medium">View Technical Logs</summary>
-                                <pre className="mt-2 whitespace-pre-wrap overflow-x-auto bg-white p-2 border rounded">
-                                  {JSON.stringify(locationDiagnostics, null, 2)}
-                                </pre>
-                              </details>
-                            )}
+                                <ul className="list-disc pl-5 space-y-1 text-xs">
+                                  <li>Check browser permission (lock icon 🔒 in address bar).</li>
+                                  <li>Ensure you are using HTTPS (secure connection).</li>
+                                  <li>If on mobile, enable GPS/Location Services.</li>
+                                </ul>
+                                
+                                <div className="pt-2">
+                                  <button 
+                                    onClick={runDiagnostics}
+                                    className="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-medium text-xs border border-gray-300 flex justify-center items-center transition-colors"
+                                  >
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    Run Connectivity & Permission Diagnostics
+                                  </button>
+                                </div>
+
+                                {showDiagnostics && (
+                                  <div className="mt-3 p-2 bg-black text-green-400 font-mono text-xs rounded overflow-x-auto whitespace-pre-wrap border border-gray-700 shadow-inner max-h-60 overflow-y-auto">
+                                    {diagnosticLog || "Initializing..."}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
