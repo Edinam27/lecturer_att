@@ -45,10 +45,34 @@ export function useAttendanceLocation() {
     setLoading(true);
     setError(null);
 
+    // Check for secure context
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      const errorMsg = 'Geolocation requires a secure connection (HTTPS). Please ensure you are accessing the site via HTTPS.';
+      console.error(errorMsg);
+      setError(errorMsg);
+      setLoading(false);
+      return null;
+    }
+
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       setLoading(false);
       return null;
+    }
+
+    // Check permissions if available
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        console.log('Geolocation permission status:', permissionStatus.state);
+        if (permissionStatus.state === 'denied') {
+          setError('Location permission is blocked. Please reset permissions in your browser address bar.');
+          setLoading(false);
+          return null;
+        }
+      } catch (e) {
+        console.warn('Error checking permissions:', e);
+      }
     }
 
     const getPosition = (options: PositionOptions): Promise<GeolocationPosition> => {
@@ -68,20 +92,18 @@ export function useAttendanceLocation() {
           maximumAge: 10000
         });
       } catch (err: any) {
-        // If timeout (3) or unavailable (2), try with low accuracy
-        if (err?.code === 3 || err?.code === 2) {
-          console.warn('High accuracy location failed, retrying with low accuracy...', {
-            code: err.code,
-            message: err.message
-          });
-          position = await getPosition({
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 10000
-          });
-        } else {
-          throw err;
-        }
+        console.warn('High accuracy location failed, attempting retry with low accuracy...', {
+          code: err?.code,
+          message: err?.message
+        });
+        
+        // Retry with low accuracy for ANY error, including permission denied (1), 
+        // as some systems deny high accuracy but allow coarse location
+        position = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 10000
+        });
       }
 
       const newLocation = {
