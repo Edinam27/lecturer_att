@@ -41,9 +41,18 @@ export function useAttendanceLocation() {
     };
   }, []);
 
+  const [locationDiagnostics, setLocationDiagnostics] = useState<any>(null);
+
   const getLocation = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const diagnostics: any = {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      secureContext: window.isSecureContext,
+      protocol: window.location.protocol,
+      hostname: window.location.hostname,
+    };
 
     // Check for secure context
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -51,12 +60,14 @@ export function useAttendanceLocation() {
       console.error(errorMsg);
       setError(errorMsg);
       setLoading(false);
+      setLocationDiagnostics({ ...diagnostics, error: 'Insecure Context' });
       return null;
     }
 
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
       setLoading(false);
+      setLocationDiagnostics({ ...diagnostics, error: 'Geolocation API missing' });
       return null;
     }
 
@@ -65,13 +76,17 @@ export function useAttendanceLocation() {
       try {
         const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
         console.log('Geolocation permission status:', permissionStatus.state);
+        diagnostics.permissionState = permissionStatus.state;
+        
         if (permissionStatus.state === 'denied') {
           setError('Location permission is blocked. Please reset permissions in your browser address bar.');
           setLoading(false);
+          setLocationDiagnostics(diagnostics);
           return null;
         }
       } catch (e) {
         console.warn('Error checking permissions:', e);
+        diagnostics.permissionCheckError = String(e);
       }
     }
 
@@ -114,6 +129,7 @@ export function useAttendanceLocation() {
 
       setLocation(newLocation);
       setLoading(false);
+      setLocationDiagnostics(null); // Clear diagnostics on success
       return newLocation;
     } catch (err: any) {
       console.error('Error getting location:', {
@@ -122,6 +138,14 @@ export function useAttendanceLocation() {
         name: err?.name,
         error: err
       });
+      
+      diagnostics.finalError = {
+        code: err?.code,
+        message: err?.message,
+        name: err?.name
+      };
+      setLocationDiagnostics(diagnostics);
+
       let errorMessage = 'Failed to get location';
       
       // Handle GeolocationPositionError codes
@@ -195,6 +219,7 @@ export function useAttendanceLocation() {
     error,
     isOffline,
     getLocation,
-    submitAttendance
+    submitAttendance,
+    locationDiagnostics
   };
 }

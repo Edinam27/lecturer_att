@@ -43,7 +43,8 @@ export default function TakeAttendancePage() {
     error: locationError, 
     getLocation, 
     submitAttendance,
-    isOffline 
+    isOffline,
+    locationDiagnostics
   } = useAttendanceLocation()
 
   const [distanceToCampus, setDistanceToCampus] = useState<number | null>(null)
@@ -528,7 +529,17 @@ export default function TakeAttendancePage() {
                           Get Current Location
                         </button>
                         {locationError && (
-                          <p className="mt-2 text-sm text-red-600">{locationError}</p>
+                          <div className="mt-2">
+                            <p className="text-sm text-red-600">{locationError}</p>
+                            {locationDiagnostics && (
+                              <details className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-500">
+                                <summary className="cursor-pointer hover:text-gray-700">View Troubleshooting Info</summary>
+                                <pre className="mt-2 whitespace-pre-wrap overflow-x-auto">
+                                  {JSON.stringify(locationDiagnostics, null, 2)}
+                                </pre>
+                              </details>
+                            )}
+                          </div>
                         )}
                       </div>
                     ) : (
