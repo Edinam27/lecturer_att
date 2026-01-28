@@ -68,7 +68,7 @@ export default function CreateSchedulePage() {
     classGroupId: '',
     lecturerId: '',
     classroomId: '',
-    dayOfWeek: 'MONDAY',
+    dayOfWeek: '1',
     startTime: '08:00',
     endTime: '10:00',
     sessionType: 'LECTURE'

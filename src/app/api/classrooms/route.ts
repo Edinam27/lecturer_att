@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       type: classroom.type,
       equipment: classroom.equipment,
       isActive: classroom.isActive,
-      createdAt: classroom.createdAt,
+      // createdAt: classroom.createdAt, // Removed as it does not exist in schema
       building: {
         id: classroom.building.id,
         name: classroom.building.name,
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         type: classroom.type,
         equipment: classroom.equipment,
         isActive: classroom.isActive,
-        createdAt: classroom.createdAt,
+        // createdAt: classroom.createdAt, // Removed as it does not exist in schema
         building: {
           ...classroom.building,
           latitude: classroom.building.gpsLatitude,

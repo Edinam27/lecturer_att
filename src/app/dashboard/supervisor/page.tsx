@@ -45,6 +45,7 @@ export default function SupervisorDashboard() {
   const router = useRouter()
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [verifyingId, setVerifyingId] = useState<string | null>(null)
   
   // Verification form state
@@ -71,15 +72,18 @@ export default function SupervisorDashboard() {
 
   const fetchSchedules = async () => {
     try {
+      setError(null)
       const response = await fetch('/api/supervisor/schedules')
       if (response.ok) {
         const data = await response.json()
         setSchedules(data)
       } else {
         console.error('Failed to fetch schedules')
+        setError('Failed to fetch schedules')
       }
     } catch (error) {
       console.error('Error fetching schedules:', error)
+      setError('An error occurred while fetching schedules')
     } finally {
       setLoading(false)
     }
@@ -152,6 +156,11 @@ export default function SupervisorDashboard() {
         </div>
 
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          {error && (
+            <div className="p-4 bg-red-50 border-b border-red-200 text-red-700">
+              {error}
+            </div>
+          )}
           <ul role="list" className="divide-y divide-gray-200">
             {schedules.length === 0 ? (
               <li className="px-4 py-8 text-center text-gray-500">

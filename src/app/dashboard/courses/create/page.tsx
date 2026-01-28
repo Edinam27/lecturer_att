@@ -15,7 +15,7 @@ interface FormData {
   courseCode: string
   title: string
   description: string
-  creditHours: number
+  credits: number
   semester: number
   isElective: boolean
   programmeId: string
@@ -31,7 +31,7 @@ export default function CreateCoursePage() {
     courseCode: '',
     title: '',
     description: '',
-    creditHours: 3,
+    credits: 3,
     semester: 1,
     isElective: false,
     programmeId: ''
@@ -98,7 +98,7 @@ export default function CreateCoursePage() {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-               type === 'number' ? parseInt(value) || 0 : value
+               type === 'number' || name === 'semester' || name === 'credits' ? parseInt(value) || 0 : value
     }))
   }
 
@@ -150,7 +150,7 @@ export default function CreateCoursePage() {
                 type="text"
                 id="courseCode"
                 name="courseCode"
-                value={formData.courseCode}
+                value={formData.courseCode ?? ''}
                 onChange={handleChange}
                 required
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -159,18 +159,17 @@ export default function CreateCoursePage() {
             </div>
 
             <div className="sm:col-span-1">
-              <label htmlFor="creditHours" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="credits" className="block text-sm font-medium text-gray-700 mb-1">
                 Credit Hours *
               </label>
               <input
                 type="number"
-                id="creditHours"
-                name="creditHours"
-                value={formData.creditHours}
+                id="credits"
+                name="credits"
+                value={formData.credits ?? ''}
                 onChange={handleChange}
                 required
                 min="1"
-                max="6"
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -184,7 +183,7 @@ export default function CreateCoursePage() {
               type="text"
               id="title"
               name="title"
-              value={formData.title}
+              value={formData.title ?? ''}
               onChange={handleChange}
               required
               className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -215,7 +214,7 @@ export default function CreateCoursePage() {
               <select
                 id="programmeId"
                 name="programmeId"
-                value={formData.programmeId}
+                value={formData.programmeId ?? ''}
                 onChange={handleChange}
                 required
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"

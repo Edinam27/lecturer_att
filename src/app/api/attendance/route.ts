@@ -7,7 +7,9 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    // Permission check is handled by middleware
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const { searchParams } = new URL(request.url)
     const userId = session.user.id
@@ -18,18 +20,17 @@ export async function GET(request: NextRequest) {
     // Filter based on user role
     if (userRole === 'LECTURER') {
       // Get lecturer's attendance records
-      const lecturer = await prisma.lecturer.findFirst({
+      const lecturer = await prisma.lecturer.findUnique({
         where: { userId }
       })
       
       if (!lecturer) {
+        console.log(`[Attendance API] Lecturer profile not found for user ${userId}`)
         return NextResponse.json({ error: 'Lecturer not found' }, { status: 404 })
       }
 
       whereClause = {
-        courseSchedule: {
-          lecturerId: lecturer.id
-        }
+        lecturerId: lecturer.id
       }
     } else if (userRole === 'CLASS_REP') {
       // Get class representative's class attendance
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
 
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: whereClause,
+      orderBy: {
+        timestamp: 'desc'
+      },
       select: {
         id: true,
         timestamp: true,
@@ -99,39 +103,35 @@ export async function GET(request: NextRequest) {
             }
           }
         }
-      },
-      orderBy: {
-        timestamp: 'desc'
-      },
-      take: 50 // Limit to recent 50 records
+      }
     })
 
     const formattedRecords = attendanceRecords.map(record => ({
       id: record.id,
       timestamp: record.timestamp,
-      sessionType: record.courseSchedule.sessionType,
-      course: {
-        title: record.courseSchedule.course.title,
-        courseCode: record.courseSchedule.course.courseCode
-      },
-      classGroup: {
-        name: record.courseSchedule.classGroup.name
-      },
-      building: {
-        name: record.courseSchedule.classroom?.building?.name || 'Virtual'
-      },
-      classroom: {
-        name: record.courseSchedule.classroom?.name || 'Virtual'
-      },
-      lecturer: {
-        name: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`
-      },
       locationVerified: record.locationVerified,
       method: record.method,
       supervisorVerified: record.supervisorVerified,
       supervisorComment: record.supervisorComment,
       gpsLatitude: record.gpsLatitude,
-      gpsLongitude: record.gpsLongitude
+      gpsLongitude: record.gpsLongitude,
+      sessionType: record.courseSchedule?.sessionType || 'Unknown',
+      course: {
+        title: record.courseSchedule?.course?.title || 'Unknown',
+        courseCode: record.courseSchedule?.course?.courseCode || 'Unknown'
+      },
+      classGroup: {
+        name: record.courseSchedule?.classGroup?.name || 'Unknown'
+      },
+      classroom: {
+        name: record.courseSchedule?.classroom?.name || 'Unknown'
+      },
+      building: {
+        name: record.courseSchedule?.classroom?.building?.name || 'Unknown'
+      },
+      lecturer: record.lecturer ? {
+        name: `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}`
+      } : undefined
     }))
 
     return NextResponse.json(formattedRecords)

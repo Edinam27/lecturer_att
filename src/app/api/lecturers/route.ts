@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         lastName: true,
         email: true,
         isActive: true,
-        createdAt: true,
+        createdAt: true, // Included as it exists in User schema
         lecturer: {
           select: {
             id: true, // Include lecturer ID

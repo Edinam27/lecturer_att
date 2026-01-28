@@ -4,6 +4,116 @@ import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
 import { z } from 'zod'
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id || !['SUPERVISOR', 'ADMIN', 'CLASS_REP'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    let whereClause: any = {
+      supervisorVerified: null // Only fetch pending records
+    }
+
+    if (session.user.role === 'CLASS_REP') {
+      const classRepGroup = await prisma.classGroup.findFirst({
+        where: { classRepId: session.user.id }
+      })
+      
+      if (!classRepGroup) {
+        return NextResponse.json({ error: 'No class group assigned' }, { status: 404 })
+      }
+
+      whereClause.courseSchedule = {
+        classGroupId: classRepGroup.id
+      }
+    }
+    // Admin and Supervisors can see all pending records for now
+    // TODO: Filter Supervisors to their specific assignments if needed
+
+    const pendingRecords = await prisma.attendanceRecord.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        timestamp: true,
+        // sessionType is in courseSchedule, not here
+        locationVerified: true,
+        method: true,
+        supervisorVerified: true,
+        supervisorComment: true,
+        gpsLatitude: true,
+        gpsLongitude: true,
+        courseSchedule: {
+          select: {
+            sessionType: true,
+            course: {
+              select: {
+                title: true,
+                courseCode: true
+              }
+            },
+            classGroup: {
+              select: {
+                name: true
+              }
+            },
+            classroom: {
+              select: {
+                name: true
+              }
+            },
+            lecturer: {
+              select: {
+                user: {
+                  select: {
+                    firstName: true,
+                    lastName: true
+                  }
+                }
+              }
+            },
+            // Include building info via classroom
+            // Note: Schema structure might vary, adjusting based on common patterns
+          }
+        }
+      },
+      orderBy: {
+        timestamp: 'desc'
+      }
+    })
+
+    // Transform data to match frontend interface
+    const formattedRecords = pendingRecords.map(record => ({
+      id: record.id,
+      timestamp: record.timestamp,
+      sessionType: record.courseSchedule.sessionType,
+      course: {
+        title: record.courseSchedule.course.title,
+        courseCode: record.courseSchedule.course.courseCode
+      },
+      classGroup: {
+        name: record.courseSchedule.classGroup.name
+      },
+      lecturer: {
+        name: record.courseSchedule.lecturer ? `${record.courseSchedule.lecturer.user.firstName} ${record.courseSchedule.lecturer.user.lastName}` : 'N/A'
+      },
+      locationVerified: record.locationVerified,
+      method: record.method,
+      supervisorVerified: record.supervisorVerified,
+      supervisorComment: record.supervisorComment,
+      gpsLatitude: record.gpsLatitude,
+      gpsLongitude: record.gpsLongitude
+    }))
+
+    return NextResponse.json(formattedRecords)
+
+  } catch (error) {
+    console.error('Error fetching pending verification records:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 const verifyAttendanceSchema = z.object({
   attendanceRecordId: z.string(),
   verified: z.boolean(),

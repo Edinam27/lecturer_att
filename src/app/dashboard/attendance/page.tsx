@@ -36,20 +36,29 @@ export default function AttendancePage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'verified' | 'pending' | 'disputed'>('all')
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAttendanceRecords()
-  }, [])
+    if (session?.user) {
+      fetchAttendanceRecords()
+    }
+  }, [session])
 
   const fetchAttendanceRecords = async () => {
     try {
+      setError(null)
       const response = await fetch('/api/attendance')
       if (response.ok) {
         const data = await response.json()
         setAttendanceRecords(data)
+      } else {
+        const err = await response.json()
+        setError(err.error || 'Failed to fetch attendance records')
+        setAttendanceRecords([])
       }
     } catch (error) {
       console.error('Error fetching attendance records:', error)
+      setError('An unexpected error occurred while fetching records')
     } finally {
       setLoading(false)
     }
@@ -139,6 +148,24 @@ export default function AttendancePage() {
           </button>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Attendance Records Table */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">

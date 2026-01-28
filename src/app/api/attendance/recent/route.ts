@@ -30,10 +30,16 @@ export async function GET(request: NextRequest) {
     
     if (userRole === 'LECTURER') {
       // Lecturers can only see attendance for their own schedules
+      const lecturer = await prisma.lecturer.findUnique({
+        where: { userId }
+      });
+      
+      if (!lecturer) {
+        return NextResponse.json({ error: 'Lecturer not found' }, { status: 404 });
+      }
+
       whereClause = {
-        courseSchedule: {
-          lecturerId: userId
-        }
+        lecturerId: lecturer.id
       };
     }
     // ADMIN and COORDINATOR can see all attendance records
@@ -42,20 +48,6 @@ export async function GET(request: NextRequest) {
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: whereClause,
       include: {
-        student: {
-          select: {
-            id: true,
-            email: true,
-            studentId: true,
-            profile: {
-              select: {
-                firstName: true,
-                lastName: true,
-                phoneNumber: true
-              }
-            }
-          }
-        },
         courseSchedule: {
           select: {
             id: true,
@@ -83,9 +75,10 @@ export async function GET(request: NextRequest) {
             lecturer: {
               select: {
                 id: true,
-                email: true,
-                profile: {
+                // email: true, // Lecturer model might not have email directly, it's in User
+                user: {
                   select: {
+                    email: true,
                     firstName: true,
                     lastName: true
                   }
@@ -106,7 +99,7 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        timestamp: 'desc'
       },
       take: 50
     });
@@ -114,30 +107,23 @@ export async function GET(request: NextRequest) {
     // Format the response
     const formattedRecords = attendanceRecords.map(record => ({
       id: record.id,
-      attendanceDate: record.attendanceDate,
-      status: record.status,
-      checkInTime: record.checkInTime,
-      checkOutTime: record.checkOutTime,
-      location: record.location,
+      attendanceDate: record.timestamp,
+      status: record.locationVerified ? 'Present' : 'Pending', // derive status
+      checkInTime: record.timestamp,
+      checkOutTime: record.sessionEndTime,
+      location: record.gpsLatitude ? `${record.gpsLatitude}, ${record.gpsLongitude}` : 'N/A',
       remarks: record.remarks,
-      createdAt: record.createdAt,
-      student: {
-        id: record.student.id,
-        email: record.student.email,
-        studentId: record.student.studentId,
-        profile: {
-          firstName: record.student.profile?.firstName,
-          lastName: record.student.profile?.lastName,
-          phoneNumber: record.student.profile?.phoneNumber
-        }
-      },
+      createdAt: record.timestamp, // Use timestamp as createdAt
+      // Removed student field as it's not applicable
       courseSchedule: {
         id: record.courseSchedule.id,
         dayOfWeek: record.courseSchedule.dayOfWeek,
         startTime: record.courseSchedule.startTime,
         endTime: record.courseSchedule.endTime,
         sessionType: record.courseSchedule.sessionType,
-        venue: `${record.courseSchedule.classroom.building.name} - ${record.courseSchedule.classroom.name}`,
+        venue: record.courseSchedule.classroom 
+          ? `${record.courseSchedule.classroom.building.name} - ${record.courseSchedule.classroom.name}`
+          : 'Virtual',
         course: {
           code: record.courseSchedule.course.code,
           name: record.courseSchedule.course.title,
@@ -151,8 +137,8 @@ export async function GET(request: NextRequest) {
         },
         lecturer: {
           id: record.courseSchedule.lecturer.id,
-          email: record.courseSchedule.lecturer.email,
-          name: `${record.courseSchedule.lecturer.profile?.firstName || ''} ${record.courseSchedule.lecturer.profile?.lastName || ''}`.trim()
+          email: record.courseSchedule.lecturer.user.email,
+          name: `${record.courseSchedule.lecturer.user.firstName} ${record.courseSchedule.lecturer.user.lastName}`.trim()
         }
       }
     }));

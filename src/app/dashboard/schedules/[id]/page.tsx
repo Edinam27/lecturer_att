@@ -13,7 +13,7 @@ interface Schedule {
   sessionType: string
   venue: string
   isActive: boolean
-  createdAt: string
+  // createdAt: string // Removed as it does not exist in schema
   course: {
     id: string
     code: string
@@ -428,13 +428,6 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                 <label className="block text-sm font-medium text-gray-500">Programme</label>
                 <p className="mt-1 text-sm text-gray-900">{schedule.course.programme.name}</p>
                 <p className="text-xs text-gray-500">{schedule.course.programme.level}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-500">Created</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {new Date(schedule.createdAt).toLocaleDateString()}
-                </p>
               </div>
             </div>
           </div>

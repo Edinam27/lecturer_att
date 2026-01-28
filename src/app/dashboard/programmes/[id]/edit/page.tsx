@@ -93,11 +93,11 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
       const programmeData = await response.json()
       setProgramme(programmeData)
       setFormData({
-        name: programmeData.name,
-        level: programmeData.level,
-        duration: programmeData.duration,
+        name: programmeData.name || '',
+        level: programmeData.level || '',
+        duration: programmeData.durationSemesters || programmeData.duration || 4,
         description: programmeData.description || '',
-        coordinatorId: programmeData.coordinator || ''
+        coordinatorId: programmeData.coordinator?.id || programmeData.coordinator || ''
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch programme')
@@ -314,7 +314,7 @@ export default function EditProgrammePage({ params }: { params: Promise<{ id: st
               <select
                 id="coordinatorId"
                 name="coordinatorId"
-                value={formData.coordinatorId}
+                value={formData.coordinatorId ?? ''}
                 onChange={handleChange}
                 className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >

@@ -98,6 +98,9 @@ export default function TakeAttendancePage() {
       if (response.ok) {
         const data = await response.json()
         setSchedules(data)
+      } else {
+        console.error('Failed to fetch schedules')
+        setSchedules([])
       }
     } catch (error) {
       console.error('Error fetching schedules:', error)
@@ -434,7 +437,7 @@ export default function TakeAttendancePage() {
                     {!virtualSessionActive ? (
                       <div>
                         <p className="text-sm text-gray-600 mb-4">
-                          Start your virtual session to begin recording attendance. Students will be able to mark their attendance once the session is active.
+                          Start your virtual session to record your attendance.
                         </p>
                         <button
                           onClick={handleStartVirtualSession}

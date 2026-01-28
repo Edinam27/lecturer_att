@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       durationSemesters: programme.durationSemesters,
       description: programme.description,
       deliveryModes: programme.deliveryModes ? JSON.parse(programme.deliveryModes) : [],
-      createdAt: programme.createdAt,
+      // createdAt: programme.createdAt, // Removed as it does not exist in schema
       _count: programme._count
     }))
 

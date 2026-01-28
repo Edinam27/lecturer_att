@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     // Permission check is handled by middleware
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || '30d'; // 7d, 30d, 3m, 6m, 1y
+    const period = searchParams.get('period') || '1y'; // Default to 1 year for production data visibility
     const type = searchParams.get('type') || 'overview'; // overview, attendance, verification, courses
 
     const user = await prisma.user.findUnique({
@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
         break;
       case '1y':
         startDate = subMonths(now, 12);
+        break;
+      case 'all':
+        startDate = new Date(0); // Beginning of time
         break;
       default:
         startDate = subDays(now, 30);
@@ -233,20 +236,20 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
 async function getVerificationAnalytics(filter: any, startDate: Date, endDate: Date) {
   // Verification trends over time
   const verificationTrends = await prisma.$queryRawUnsafe(`
-    SELECT 
-      ar.updated_at::date as day,
-      COUNT(*) as total,
-      SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
-      SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed
-    FROM attendance_records ar
-    ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
-    WHERE ar.updated_at >= '${startDate.toISOString()}' AND ar.updated_at <= '${endDate.toISOString()}'
-    AND ar.supervisor_verified IS NOT NULL
-    ${filter.lecturerId ? `AND ar.lecturer_id = '${filter.lecturerId}'` : ''}
-    ${filter.courseSchedule?.classGroupId ? `AND cs.class_group_id = '${filter.courseSchedule.classGroupId}'` : ''}
-    GROUP BY ar.updated_at::date
-    ORDER BY day
-  `);
+      SELECT 
+        ar.timestamp::date as day,
+        COUNT(*) as total,
+        SUM(CASE WHEN ar.supervisor_verified IS TRUE THEN 1 ELSE 0 END) as verified,
+        SUM(CASE WHEN ar.supervisor_verified IS FALSE THEN 1 ELSE 0 END) as disputed
+      FROM attendance_records ar
+      ${filter.courseSchedule?.classGroupId ? 'JOIN course_schedules cs ON ar.course_schedule_id = cs.id' : ''}
+      WHERE ar.timestamp >= '${startDate.toISOString()}' AND ar.timestamp <= '${endDate.toISOString()}'
+      AND ar.supervisor_verified IS NOT NULL
+      ${filter.lecturerId ? `AND ar.lecturer_id = '${filter.lecturerId}'` : ''}
+      ${filter.courseSchedule?.classGroupId ? `AND cs.class_group_id = '${filter.courseSchedule.classGroupId}'` : ''}
+      GROUP BY ar.timestamp::date
+      ORDER BY day
+    `);
 
   // Verification requests by status
   const verificationRequests = await prisma.verificationRequest.groupBy({

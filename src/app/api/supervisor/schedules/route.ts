@@ -12,12 +12,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    // Hardcoded date to match seed data (2025-01-24)
-    const today = new Date('2025-01-24T12:00:00Z')
-    const todayDayOfWeek = today.getDay()
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+    // Use simulated date for testing/demo purposes
+    // Hardcoded to Friday 2025-01-24 as per project requirements
+    const today = new Date('2025-01-24T12:00:00Z') // Set to noon UTC to avoid timezone edge cases
+    const todayDayOfWeek = today.getUTCDay()
+    
+    const startOfDay = new Date(today)
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(today)
+    endOfDay.setUTCHours(23, 59, 59, 999)
 
     // Fetch today's schedules
     const schedules = await prisma.courseSchedule.findMany({

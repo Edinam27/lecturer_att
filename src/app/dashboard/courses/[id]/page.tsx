@@ -14,7 +14,6 @@ interface Course {
   creditHours: number
   semester: number
   isElective: boolean
-  createdAt: string
   programme: {
     id: string
     name: string
@@ -32,9 +31,11 @@ interface CourseSchedule {
   endTime: string
   sessionType: string
   lecturer: {
-    firstName: string
-    lastName: string
-    email: string
+    user: {
+      firstName: string
+      lastName: string
+      email: string
+    }
   }
   classGroup: {
     name: string
@@ -42,6 +43,7 @@ interface CourseSchedule {
   }
   classroom: {
     roomCode: string
+    name: string
     building: {
       name: string
     }
@@ -227,10 +229,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               <p className="mt-1 text-gray-900">{course.description}</p>
             </div>
           )}
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700">Created</label>
-            <p className="mt-1 text-gray-900">{formatDate(course.createdAt)}</p>
-          </div>
         </div>
       </div>
 

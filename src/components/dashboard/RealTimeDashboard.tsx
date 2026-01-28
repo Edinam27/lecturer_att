@@ -69,7 +69,7 @@ export default function RealTimeDashboard({
     try {
       if (showLoader) setIsRefreshing(true);
       
-      const response = await fetch('/api/analytics?type=overview&period=7d');
+      const response = await fetch('/api/analytics?type=overview&period=all');
       if (!response.ok) {
         if (response.status === 401 || response.status === 404) {
           console.error('Authentication session invalid');

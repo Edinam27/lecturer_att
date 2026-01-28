@@ -59,6 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         classroom: {
           select: {
             name: true,
+            roomCode: true,
             building: {
               select: {
                 name: true

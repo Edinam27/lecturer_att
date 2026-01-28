@@ -98,7 +98,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     startTime: '',
     endTime: '',
     sessionType: 'LECTURE',
-    isActive: true
+    isActive: true,
   });
 
   useEffect(() => {
@@ -131,15 +131,14 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
       
       // Set form data
       setFormData({
-        courseId: scheduleData.course.id.toString(),
-        classGroupId: scheduleData.classGroup.id.toString(),
-        lecturerId: scheduleData.lecturer.id.toString(),
-        classroomId: scheduleData.classroom ? scheduleData.classroom.id.toString() : '',
-        dayOfWeek: scheduleData.dayOfWeek.toString(),
-        startTime: scheduleData.startTime,
-        endTime: scheduleData.endTime,
-        sessionType: scheduleData.sessionType,
-        isActive: scheduleData.isActive
+        courseId: scheduleData.course?.id || '',
+        classGroupId: scheduleData.classGroup?.id || '',
+        lecturerId: scheduleData.lecturer?.id || '',
+        classroomId: scheduleData.classroom?.id || '',
+        dayOfWeek: scheduleData.dayOfWeek || '',
+        startTime: scheduleData.startTime || '',
+        endTime: scheduleData.endTime || '',
+        sessionType: scheduleData.sessionType || 'LECTURE',
       });
 
       // Fetch all required data

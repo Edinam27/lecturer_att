@@ -12,7 +12,7 @@ interface Programme {
   durationSemesters: number
   description: string
   deliveryModes: string[]
-  createdAt: string
+  // createdAt: string // Removed as it does not exist in schema
   _count?: {
     courses: number
     classGroups: number
@@ -24,6 +24,7 @@ export default function ProgrammesPage() {
   const router = useRouter()
   const [programmes, setProgrammes] = useState<Programme[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
@@ -44,13 +45,17 @@ export default function ProgrammesPage() {
 
   const fetchProgrammes = async () => {
     try {
+      setError(null)
       const response = await fetch('/api/programmes')
       if (response.ok) {
         const data = await response.json()
         setProgrammes(data)
+      } else {
+        setError('Failed to fetch programmes')
       }
     } catch (error) {
       console.error('Error fetching programmes:', error)
+      setError('An error occurred while fetching programmes')
     } finally {
       setLoading(false)
     }
@@ -92,6 +97,21 @@ export default function ProgrammesPage() {
           Manage academic programmes and degree offerings
         </p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div className="flex space-x-2 mb-4 sm:mb-0">
@@ -182,10 +202,7 @@ export default function ProgrammesPage() {
                 )}
                 
                 <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                  <span className="text-xs text-gray-400">
-                    Created: {new Date(programme.createdAt).toLocaleDateString()}
-                  </span>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 ml-auto">
                     <Link
                       href={`/dashboard/programmes/${programme.id}`}
                       className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"

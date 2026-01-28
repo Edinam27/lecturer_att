@@ -106,6 +106,10 @@ export async function POST(request: NextRequest) {
         locationVerified = isNearby;
     }
 
+    // Determine if this is a virtual session (no classroom assigned)
+    // For virtual sessions, we do NOT record student attendance data
+    const isVirtual = !schedule.classroom;
+
     const newRecord = await prisma.attendanceRecord.create({
       data: {
         lecturerId: lecturer.id,
@@ -114,8 +118,8 @@ export async function POST(request: NextRequest) {
         gpsLatitude: location?.latitude || null,
         gpsLongitude: location?.longitude || null,
         locationVerified: locationVerified,
-        method: 'onsite',
-        studentAttendanceData: JSON.stringify(attendanceRecords),
+        method: isVirtual ? 'virtual' : 'onsite',
+        studentAttendanceData: isVirtual ? null : JSON.stringify(attendanceRecords),
         remarks: notes,
       },
     });

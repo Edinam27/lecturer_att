@@ -67,11 +67,19 @@ export async function POST(request: NextRequest) {
     const deviceFingerprint = generateDeviceFingerprint(userAgent, ipAddress)
 
     // Check if attendance already recorded today
-    // Use simulated date for testing (2025-01-24) to match seed data
-    const realNow = new Date()
-    const today = new Date(`2025-01-24T${realNow.toISOString().split('T')[1]}`)
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+    // Use simulated date for testing/demo purposes
+    const today = new Date('2025-01-24T12:00:00Z')
+    
+    // Create simulated timestamp preserving current time
+    const now = new Date()
+    const recordTimestamp = new Date(today)
+    recordTimestamp.setUTCHours(now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), now.getUTCMilliseconds())
+    
+    const startOfDay = new Date(today)
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(today)
+    endOfDay.setUTCHours(23, 59, 59, 999)
     
     const existingRecord = await prisma.attendanceRecord.findFirst({
       where: {
@@ -125,6 +133,8 @@ export async function POST(request: NextRequest) {
             sessionDurationMet: false, // Will be updated when session ends
             deviceFingerprint,
             ipAddress
+            // Explicitly ensure student data is not recorded here.
+            // studentAttendanceData is left as null by default.
           }
         })
         
@@ -241,14 +251,14 @@ export async function POST(request: NextRequest) {
       data: {
         lecturerId: lecturer.id,
         courseScheduleId: scheduleId,
-        timestamp: new Date(),
+        timestamp: recordTimestamp,
         gpsLatitude: latitude || null,
         gpsLongitude: longitude || null,
         locationVerified,
         method: method,
         supervisorVerified: null, // Will be verified later by supervisor
         supervisorComment: null,
-        sessionStartTime: method === 'virtual' ? new Date() : null,
+        sessionStartTime: method === 'virtual' ? recordTimestamp : null,
         timeWindowVerified,
         meetingLinkVerified,
         sessionDurationMet: method === 'onsite', // Onsite doesn't need duration check

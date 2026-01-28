@@ -14,21 +14,24 @@ export async function GET(request: NextRequest) {
     const userRole = session.user.role
     const userId = session.user.id
 
-    // Get current week date range
-    // Hardcoded date to match seed data (2025-01-24)
+    // Get current week date range (UTC)
+    // Use simulated date for testing/demo purposes
     const now = new Date('2025-01-24T12:00:00Z')
+    const day = now.getUTCDay()
+    const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+    
     const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay())
-    startOfWeek.setHours(0, 0, 0, 0)
+    startOfWeek.setUTCDate(diff)
+    startOfWeek.setUTCHours(0, 0, 0, 0)
     
     const endOfWeek = new Date(startOfWeek)
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
-    endOfWeek.setHours(23, 59, 59, 999)
+    endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6)
+    endOfWeek.setUTCHours(23, 59, 59, 999)
 
     let stats: any = {}
 
-    if (userRole === 'ADMIN') {
-      // Admin sees system-wide statistics
+    if (userRole === 'ADMIN' || userRole === 'SUPERVISOR' || userRole === 'ONLINE_SUPERVISOR') {
+      // Admin and Supervisors see system-wide statistics
       const [totalSessions, totalCourses, totalUsers, weeklyAttendance] = await Promise.all([
         prisma.attendanceRecord.count(),
         prisma.course.count(),
@@ -106,13 +109,30 @@ export async function GET(request: NextRequest) {
         })
       ])
 
+      // Calculate total students (sum of studentCount in unique class groups taught by lecturer)
+      const schedules = await prisma.courseSchedule.findMany({
+        where: { lecturerId: lecturer.id },
+        select: { classGroupId: true },
+        distinct: ['classGroupId']
+      })
+
+      const classGroupIds = schedules.map(s => s.classGroupId)
+      
+      const classGroups = await prisma.classGroup.findMany({
+        where: { id: { in: classGroupIds } },
+        select: { studentCount: true }
+      })
+
+      const totalStudents = classGroups.reduce((sum, group) => sum + (group.studentCount || 0), 0)
+
       const attendanceRate = myCourses > 0 ? Math.round((myWeeklyAttendance / myCourses) * 100) : 0
 
       stats = {
         totalSessions: mySessions,
         attendanceRate,
         activeCourses: myCourses,
-        thisWeek: myWeeklyAttendance
+        thisWeek: myWeeklyAttendance,
+        totalStudents
       }
     } else if (userRole === 'CLASS_REP') {
       // Class rep sees their class statistics

@@ -17,7 +17,7 @@ interface Schedule {
   endTime: string
   venue: string
   isActive: boolean
-  createdAt: string
+  // createdAt: string // Removed as it does not exist in schema
   course: {
     id: string
     code: string
@@ -329,10 +329,7 @@ export default function SchedulesPage() {
                   </div>
                 )}
                 
-                <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                  <span className="text-xs text-gray-400">
-                    Created: {new Date(schedule.createdAt).toLocaleDateString()}
-                  </span>
+                <div className="flex justify-end items-center pt-4 border-t border-gray-200">
                   <div className="flex space-x-2">
                     <Link
                       href={`/dashboard/schedules/${schedule.id}`}

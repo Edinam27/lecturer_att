@@ -115,7 +115,7 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
   const fetchData = async () => {
     try {
       setFetchLoading(true)
-      const [userResponse, programmeResponse] = await Promise.all([
+      const [userResponse, classGroupsResponse] = await Promise.all([
         fetch(`/api/users/${resolvedParams.id}`),
         fetch('/api/class-groups')
       ])
@@ -129,11 +129,11 @@ export default function EditUserPage({ params }: { params: Promise<{ id: string 
       
       // Set form data from user
       setFormData({
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        role: userData.role,
-        isActive: userData.isActive,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        email: userData.email || '',
+        role: userData.role || 'STUDENT',
+        isActive: userData.isActive ?? true,
         profile: {
           phoneNumber: userData.profile?.phoneNumber || '',
           dateOfBirth: userData.profile?.dateOfBirth ? userData.profile.dateOfBirth.split('T')[0] : '',

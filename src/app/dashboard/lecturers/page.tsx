@@ -20,7 +20,6 @@ interface Lecturer {
     email: string
   }
   isActive: boolean
-  createdAt: string
   lecturer: {
     employeeId: string | null
     department: string | null

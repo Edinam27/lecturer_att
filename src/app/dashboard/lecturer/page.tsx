@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 interface DashboardCard {
@@ -11,6 +11,31 @@ interface DashboardCard {
   href: string
   color: string
   icon: string
+}
+
+interface Schedule {
+  id: string
+  hasAttendance: boolean
+  course: {
+    title: string
+    courseCode: string
+  }
+  startTime: string
+  endTime: string
+  classroom: {
+    name: string
+  }
+  classGroup: {
+    name: string
+  }
+}
+
+interface Stats {
+  mySessions: number
+  attendanceRate: number
+  activeCourses: number
+  thisWeek: number
+  totalStudents: number
 }
 
 const lecturerCards: DashboardCard[] = [
@@ -94,6 +119,9 @@ const getIcon = (iconName: string) => {
 export default function LecturerDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -107,9 +135,34 @@ export default function LecturerDashboard() {
       router.replace('/dashboard')
       return
     }
+
+    const fetchData = async () => {
+      try {
+        const [schedulesRes, statsRes] = await Promise.all([
+          fetch('/api/schedules/today'),
+          fetch('/api/dashboard/stats')
+        ])
+        
+        if (schedulesRes.ok) {
+          const data = await schedulesRes.json()
+          setSchedules(Array.isArray(data) ? data : [])
+        }
+        
+        if (statsRes.ok) {
+          const data = await statsRes.json()
+          setStats(data)
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [session, status, router])
 
-  if (status === 'loading') {
+  if (status === 'loading' || (loading && session?.user.role === 'LECTURER')) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-500"></div>
@@ -161,9 +214,38 @@ export default function LecturerDashboard() {
       <div className="mt-8 sm:mt-12">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Today's Schedule</h2>
         <div className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-          <p className="text-sm sm:text-base text-gray-500 text-center py-6 sm:py-8">
-            Your today's schedule will be displayed here
-          </p>
+          {schedules.length > 0 ? (
+            <div className="space-y-4">
+              {schedules.map((schedule) => (
+                <div key={schedule.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{schedule.course.title}</h3>
+                    <p className="text-sm text-gray-600">{schedule.course.courseCode} - {schedule.classGroup.name}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
+                      {new Date(schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {schedule.classroom?.name || 'Virtual'}
+                      </span>
+                      {schedule.hasAttendance && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Attendance Taken
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm sm:text-base text-gray-500 text-center py-6 sm:py-8">
+              No classes scheduled for today
+            </p>
+          )}
         </div>
       </div>
 
@@ -172,19 +254,19 @@ export default function LecturerDashboard() {
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Quick Stats</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
-            <div className="text-xl sm:text-2xl font-bold text-blue-600">--</div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats?.thisWeek ?? '--'}</div>
             <div className="text-xs sm:text-sm text-gray-600">Sessions This Week</div>
           </div>
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
-            <div className="text-xl sm:text-2xl font-bold text-green-600">--</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{stats?.attendanceRate ?? '--'}%</div>
             <div className="text-xs sm:text-sm text-gray-600">Attendance Rate</div>
           </div>
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
-            <div className="text-xl sm:text-2xl font-bold text-purple-600">--</div>
+            <div className="text-xl sm:text-2xl font-bold text-purple-600">{stats?.activeCourses ?? '--'}</div>
             <div className="text-xs sm:text-sm text-gray-600">Active Courses</div>
           </div>
           <div className="bg-white p-4 sm:p-6 rounded-lg shadow border border-gray-200">
-            <div className="text-xl sm:text-2xl font-bold text-yellow-600">--</div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats?.totalStudents ?? '--'}</div>
             <div className="text-xs sm:text-sm text-gray-600">Total Students</div>
           </div>
         </div>

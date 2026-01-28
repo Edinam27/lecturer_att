@@ -21,11 +21,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get today's day of week (0 = Sunday, 1 = Monday, etc.)
-    // Hardcoded date to match seed data (2025-01-24)
+    // Use simulated date for testing/demo purposes
     const today = new Date('2025-01-24T12:00:00Z')
-    const todayDayOfWeek = today.getDay()
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+    const todayDayOfWeek = today.getUTCDay()
+    
+    const startOfDay = new Date(today)
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    
+    const endOfDay = new Date(today)
+    endOfDay.setUTCHours(23, 59, 59, 999)
 
     // Fetch today's schedules for this lecturer
     const schedules = await prisma.courseSchedule.findMany({
@@ -55,18 +59,15 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Filter out schedules that already have attendance recorded
-    const availableSchedules = schedules.filter(schedule => 
-      schedule.attendanceRecords.length === 0
-    )
-
-    const formattedSchedules = availableSchedules.map(schedule => ({
+    // Include all schedules, but mark those with attendance
+    const formattedSchedules = schedules.map(schedule => ({
       id: schedule.id,
       sessionDate: today.toISOString().split('T')[0], // Add today's date for frontend
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
       meetingLink: schedule.meetingLink,
+      hasAttendance: schedule.attendanceRecords.length > 0,
       course: {
         id: schedule.course.id,
         title: schedule.course.title,

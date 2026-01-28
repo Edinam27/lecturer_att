@@ -1,0 +1,750 @@
+UPSA Graduate School Lecturer Attendance & Academic Management System — Enhanced Specification (Next.js + Neon Postgres Edition)
+1. Overview
+Purpose
+To develop a comprehensive web-based, geolocation-verified lecturer attendance system for the Graduate School of the University of Professional Studies, Accra (UPSA). The system will:
+
+Allow lecturers to mark attendance only within approved GPS range of the Graduate School.
+
+Provide robust virtual class management with meeting integration and session tracking.
+
+Enable class representatives to verify lecturer attendance with detailed workflow.
+
+Feature world-class visual dashboards with real-time analytics, charts, and graphs.
+
+Provide bulk import capabilities for core academic data (users, programmes, courses, class groups, classrooms, schedules).
+
+Support advanced role-based dashboards with granular permissions.
+
+Implement comprehensive audit trails and notification systems.
+
+Store all data in Neon (serverless PostgreSQL) for reliable, scalable production. Use a Neon dev branch locally or a dedicated dev project.
+
+2. Target Users and Roles
+System Administrator
+
+Manages users, programmes, courses, schedules, and classrooms.
+
+Oversees bulk data imports and system configuration.
+
+Monitors attendance logs, audit trails, and system activity.
+
+Manages notification settings and automated reports.
+
+Configures geolocation boundaries and virtual class parameters.
+
+Academic Coordinator
+
+Assigns courses and schedules to lecturers.
+
+Manages programmes and class groups.
+
+Can run imports for relevant datasets.
+
+Views comprehensive analytics and generates reports.
+
+Manages class representative assignments and permissions.
+
+Lecturer
+
+Marks attendance for their assigned courses (physical and virtual).
+
+Views personal schedules and attendance history.
+
+Manages virtual class sessions and meeting links.
+
+Receives notifications for upcoming classes and verification requests.
+
+Class Representative
+
+Verifies lecturer attendance with detailed verification workflow.
+
+Manages class attendance records and student verification.
+
+Receives real-time notifications for class sessions.
+
+Accesses mobile-responsive interface for quick verification.
+
+Submits detailed reports on class sessions and lecturer performance.
+
+3. Graduate School Programmes
+The database will be seeded with UPSA Graduate School’s current programmes (updatable via import):
+
+PhD: Accounting, Finance, Marketing
+MPhil: Accounting, Finance, Marketing, Leadership
+MBA: Accounting & Finance, Marketing, Corporate Governance, Internal Auditing, Auditing, Petroleum Accounting, Total Quality Management, Impact Entrepreneurship & Innovation, Project Management, Procurement, General Management
+MSc: Leadership, Procurement, Accounting & Finance
+MA: Brands and Communication Management
+LL.M.: Alternative Dispute Resolution
+
+4. Core Enhanced Features
+A. Advanced Geolocation-Verified Attendance
+Attendance can only be marked within configurable radius (default 300 meters) of UPSA Graduate School coordinates.
+
+Verification done using HTML5 Geolocation API with fallback mechanisms.
+
+Distance calculated using Haversine formula on the backend with accuracy validation.
+
+Multiple verification methods: GPS, IP-based location, and manual override for emergencies.
+
+Stored per record:
+
+Lecturer ID and session metadata
+
+Course schedule ID with class group details
+
+Precise timestamp with timezone support
+
+GPS coordinates with accuracy measurements
+
+Verification result with confidence score
+
+Method (onsite/virtual/emergency)
+
+Class rep verification status with detailed workflow
+
+Session duration and engagement metrics
+
+A1. Enhanced Virtual Class Management
+Robust virtual session support with meeting platform integration (Zoom, Teams, Google Meet).
+
+Automatic meeting link generation and distribution.
+
+Session recording capabilities with secure storage.
+
+Real-time participant tracking and engagement monitoring.
+
+Virtual attendance verification through multiple checkpoints during session.
+
+Integration with calendar systems for automated scheduling.
+
+Breakout room management for group activities.
+
+Chat and Q&A session logging for academic records.
+
+A2. Supervisor Verification System
+Detailed verification workflow with multiple approval stages.
+
+Real-time notification system for verification requests.
+
+Mobile-optimized interface for quick verification on-the-go.
+
+Photo and video evidence upload capabilities.
+
+Student attendance cross-verification by class reps.
+
+Detailed reporting on lecturer punctuality and session quality.
+
+Escalation system for disputed verifications.
+
+Batch verification for multiple sessions.
+
+A3. World-Class Visual Dashboard
+Real-time analytics with live data updates.
+
+Interactive charts and graphs using Chart.js and D3.js.
+
+Customizable dashboard widgets for different user roles.
+
+Advanced filtering and drill-down capabilities.
+
+Predictive analytics for attendance patterns.
+
+Heatmaps for classroom utilization and attendance trends.
+
+Comparative analysis across programmes and semesters.
+
+Exportable reports in multiple formats (PDF, Excel, CSV).
+
+Mobile-responsive design with touch-friendly interactions.
+
+A1. Lecturer Assignment System (IMPLEMENTED)
+Coordinators can assign lecturers to courses through an intuitive interface.
+
+Lecturer assignment creates course schedules automatically.
+
+Form validation ensures data integrity and prevents conflicts.
+
+Real-time feedback for successful assignments and error handling.
+
+Integrated with course detail pages for seamless workflow.
+
+B. Advanced Role-Based Access Control
+Admin: All CRUD operations + imports + view all logs + system configuration + notification management.
+
+Coordinator: Manage schedules, programmes, and class groups + analytics + report generation + class rep management.
+
+Lecturer: Attendance marking + viewing own history + virtual session management + notification preferences.
+
+Class Rep: Session verification + student attendance management + mobile interface + evidence upload.
+
+Guest/Observer: Read-only access to public dashboards and reports (configurable).
+
+B1. Advanced Notification System
+Real-time push notifications for web and mobile devices.
+
+Email notifications with customizable templates and scheduling.
+
+SMS integration for critical alerts and reminders.
+
+In-app notification center with read/unread status.
+
+Notification preferences per user role and individual settings.
+
+Escalation workflows for unverified sessions.
+
+Batch notifications for multiple recipients.
+
+Notification analytics and delivery tracking.
+
+B2. Comprehensive Audit Trail System
+Detailed logging of all user actions and system events.
+
+Immutable audit records with cryptographic integrity.
+
+Advanced search and filtering capabilities for audit logs.
+
+Automated compliance reporting for academic standards.
+
+Data retention policies with automatic archiving.
+
+Suspicious activity detection and alerting.
+
+User behavior analytics and pattern recognition.
+
+Export capabilities for external audit requirements.
+
+B3. Progressive Web App (PWA) Capabilities
+Offline functionality for critical features.
+
+Installable app experience on mobile devices.
+
+Push notification support across platforms.
+
+Background sync for attendance data.
+
+Optimized performance with service workers.
+
+Responsive design for all screen sizes.
+
+Touch-friendly interface with gesture support.
+
+App-like navigation and user experience.
+
+C. Bulk Data Import
+Import from CSV/Excel into Neon Postgres tables with full validation and rollback:
+
+users: email, name, role, active status.
+
+programmes: name, level, duration, description, delivery modes.
+
+courses: course code, title, credit hours, programme link, semester level, elective status.
+
+class_groups: group name, programme link, admission year, delivery mode, class rep.
+
+buildings: code, name, description, address, GPS coordinates.
+
+classrooms: room code, building link, capacity, type, equipment list, GPS coordinates, availability.
+
+course_schedules: course link, class group link, lecturer link, day/time, classroom link, session type.
+
+C1. API Endpoints (IMPLEMENTED)
+Comprehensive REST API endpoints for all data operations:
+
+/api/class-groups - GET (fetch all), POST (create new)
+
+/api/class-groups/my-class - GET (class rep specific)
+
+/api/courses/[id]/schedules - GET (course schedules), POST (create schedule)
+
+/api/schedules/[id] - GET, PUT, DELETE (schedule management)
+
+/api/schedules/[id]/attendance - GET, POST (attendance operations)
+
+/api/users/[id] - GET, PUT, DELETE (user management)
+
+/api/programmes/[id] - GET, PUT, DELETE (programme management)
+
+All endpoints include proper authentication, authorization, and error handling.
+
+Import flow:
+
+Upload CSV/Excel file.
+
+System validates data (missing fields, invalid references).
+
+Preview validated data in the browser.
+
+Confirm to insert into Neon Postgres.
+
+Errors logged and downloadable as CSV.
+
+D. Classroom & Facility Management
+Track buildings and rooms with GPS coordinates.
+
+Manage capacity, type (lecture hall, seminar room, lab), and equipment.
+
+Mark rooms as available, under maintenance, or booked.
+
+Support virtual room links for online classes.
+
+E. Dashboards
+Admin Dashboard: Attendance logs, import logs, system activity.
+
+Coordinator Dashboard: Class group status, schedules, attendance summaries.
+
+Lecturer Dashboard: Upcoming sessions, personal attendance log.
+
+5. Enhanced System Schema (ER Model)
+users
+
+id (PK)
+
+email, password_hash, first_name, last_name, role, is_active, phone_number, timezone
+
+notification_preferences (JSON), last_login, profile_image_url
+
+created_at, updated_at
+
+lecturers
+
+id (PK)
+
+user_id (FK → users.id)
+
+employee_id, rank, department, employment_type, office_location
+
+specializations (JSON), bio, calendar_integration_token
+
+programmes
+
+id (PK)
+
+name, level, duration_semesters, description, delivery_modes, is_active
+
+accreditation_info (JSON), programme_coordinator_id (FK → users.id)
+
+courses
+
+id (PK)
+
+course_code, title, credit_hours, programme_id (FK), semester_level, is_elective, description
+
+learning_outcomes (JSON), prerequisites (JSON), assessment_methods (JSON)
+
+class_groups
+
+id (PK)
+
+name, programme_id (FK), admission_year, delivery_mode, class_rep_id (FK → users.id)
+
+student_count, group_email, whatsapp_group_link, is_active
+
+virtual_sessions
+
+id (PK)
+
+course_schedule_id (FK → course_schedules.id)
+
+meeting_platform, meeting_link, meeting_id, passcode
+
+recording_url, recording_duration, participant_count
+
+session_start_time, session_end_time, breakout_rooms (JSON)
+
+chat_log (TEXT), q_and_a_log (TEXT)
+
+verification_requests
+
+id (PK)
+
+attendance_record_id (FK → attendance_records.id)
+
+class_rep_id (FK → users.id), status (pending/approved/rejected/disputed)
+
+evidence_urls (JSON), verification_notes (TEXT)
+
+submitted_at, reviewed_at, escalated_at
+
+notifications
+
+id (PK)
+
+user_id (FK → users.id), type, title, message, data (JSON)
+
+read_at, sent_at, delivery_status, channel (web/email/sms)
+
+buildings
+
+id (PK)
+
+code, name, description, address, gps_latitude, gps_longitude, total_floors
+
+classrooms
+
+id (PK)
+
+room_code, name, building_id (FK), capacity, room_type, equipment_list, gps_latitude, gps_longitude, availability_status, virtual_link
+
+course_schedules
+
+id (PK)
+
+course_id (FK), class_group_id (FK), lecturer_id (FK), day_of_week, start_time, end_time, classroom_id (FK), session_type
+
+attendance_records
+
+id (PK)
+
+lecturer_id (FK), course_schedule_id (FK), timestamp, gps_latitude, gps_longitude
+
+location_verified, location_accuracy, method, class_rep_verified, class_rep_comment
+
+session_duration, engagement_score, virtual_session_id (FK → virtual_sessions.id)
+
+ip_address, user_agent, device_info (JSON), verification_confidence_score
+
+student_attendance_data (JSON), session_quality_rating, technical_issues (JSON)
+
+import_jobs
+
+id (PK)
+
+initiated_by (FK → users.id), job_type, status, file_name, summary
+
+started_at, completed_at, rollback_available, records_processed, errors_count
+
+error_log (TEXT), validation_results (JSON)
+
+audit_logs
+
+id (PK)
+
+user_id (FK → users.id), action, target_type, target_id, metadata, timestamp
+
+ip_address, user_agent, session_id, risk_score, data_hash
+
+system_settings
+
+id (PK)
+
+setting_key, setting_value (JSON), description, category
+
+is_public, modified_by (FK → users.id), modified_at
+
+reports
+
+id (PK)
+
+report_type, generated_by (FK → users.id), parameters (JSON)
+
+file_url, file_size, generated_at, expires_at
+
+scheduled_reports
+
+id (PK)
+
+report_type, schedule_cron, recipients (JSON), parameters (JSON)
+
+created_by (FK → users.id), is_active, last_run_at, next_run_at
+
+6. Enhanced Tech Stack
+Frontend
+
+Next.js 14+ (React-based full-stack framework with App Router)
+
+TailwindCSS for responsive, utility-first styling with custom design system
+
+TanStack Table for displaying import previews and data grids
+
+React Hook Form for form handling and validation
+
+Next-Auth for authentication and session management
+
+Chart.js for interactive charts and graphs
+
+D3.js for advanced data visualizations and custom charts
+
+Framer Motion for smooth animations and transitions
+
+React Query (TanStack Query) for server state management
+
+Zustand for client-side state management
+
+React Hot Toast for notification toasts
+
+React Dropzone for file uploads
+
+Backend (inside Next.js API routes)
+
+Neon (Serverless PostgreSQL, managed, scalable; production-ready)
+
+Prisma ORM for schema management and migrations
+
+Zod for backend validation of imported data
+
+Nodemailer for email notifications
+
+Twilio SDK for SMS notifications
+
+WebSocket support for real-time features
+
+Node-cron for scheduled tasks and reports
+
+Bcrypt for password hashing and security
+
+JWT for token-based authentication
+
+PWA & Mobile
+
+Next.js PWA plugin for Progressive Web App features
+
+Workbox for service worker management
+
+Web Push API for push notifications
+
+IndexedDB for offline data storage
+
+Other
+
+xlsx NPM package for reading Excel files in imports
+
+dayjs for date/time handling with timezone support
+
+geolib for Haversine distance calculations
+
+Sharp for image processing and optimization
+
+PDF-lib for PDF generation and manipulation
+
+Socket.io for real-time communication
+
+Helmet.js for security headers
+
+Rate limiting middleware for API protection
+
+6.1 Implementation Best Practices (APPLIED)
+Next.js App Router compatibility: All dynamic routes use React.use() for params
+
+TypeScript strict mode for type safety
+
+Consistent error handling across API endpoints
+
+Role-based access control with middleware
+
+Optimistic UI updates for better user experience
+
+7. Enhanced Success Criteria
+Core Functionality
+
+Lecturers can mark attendance only within GPS range or via comprehensive virtual session management.
+
+Class representatives can verify lecturer attendance through detailed workflow with evidence upload.
+
+Bulk import for users, programmes, courses, class groups, buildings, classrooms, schedules works end-to-end.
+
+World-class dashboards show real-time analytics with interactive charts and graphs.
+
+Advanced RBAC with granular permissions prevents unauthorized access.
+
+PostgreSQL (Neon) schema supports all enhanced features with proper relationships.
+
+Advanced Features
+
+Real-time notification system works across web, email, and SMS channels.
+
+Comprehensive audit trail captures all user actions with integrity verification.
+
+PWA functionality provides offline capabilities and mobile app experience.
+
+Virtual session management integrates with major meeting platforms.
+
+Automated report generation and scheduling works reliably.
+
+Predictive analytics provide insights into attendance patterns.
+
+Performance & Security
+
+System handles concurrent users without performance degradation.
+
+Data encryption and security measures protect sensitive information.
+
+API rate limiting prevents abuse and ensures system stability.
+
+Mobile responsiveness works across all device types and screen sizes.
+
+Offline functionality syncs properly when connection is restored.
+
+7.1 Additional Success Criteria (ACHIEVED)
+Lecturer assignment system fully functional with validation
+
+Seamless API-Frontend interaction with proper error handling
+
+Next.js compatibility warnings resolved
+
+Comprehensive API endpoints for all CRUD operations
+
+Role-based dashboard access working correctly
+
+8. API-Frontend Integration Strategy
+
+8.1 Data Flow Architecture
+Frontend components use React hooks (useState, useEffect) for state management
+
+API calls wrapped in try-catch blocks with proper error handling
+
+Loading states implemented for better UX during API operations
+
+Optimistic updates where appropriate (e.g., form submissions)
+
+8.2 Error Handling Strategy
+Consistent error response format across all API endpoints
+
+Frontend error boundaries to catch and display user-friendly messages
+
+Validation errors displayed inline with form fields
+
+Network errors handled with retry mechanisms
+
+8.3 Authentication Flow
+Next-Auth integration for secure session management
+
+Role-based route protection using middleware
+
+API endpoints validate user permissions before data operations
+
+Automatic token refresh and session management
+
+8.4 Performance Optimizations
+API response caching where appropriate
+
+Pagination for large data sets
+
+Debounced search inputs to reduce API calls
+
+Lazy loading for non-critical components
+
+8.5 Development Workflow
+API-first development approach
+
+Consistent naming conventions between frontend and backend
+
+TypeScript interfaces shared between API and components
+
+Comprehensive error logging for debugging
+
+9. Known Issues and Solutions
+
+9.1 Next.js Params Warning (RESOLVED)
+Issue: Direct access to params.id in dynamic routes
+Solution: Updated all dynamic route components to use React.use(params)
+Impact: Future-proofed for Next.js updates
+
+9.2 Missing API Endpoints (RESOLVED)
+Issue: Class groups not appearing in lecturer assignment
+Solution: Created /api/class-groups endpoint with proper CRUD operations
+Impact: Full functionality restored for lecturer assignments
+
+9.3 Form Validation (IMPLEMENTED)
+Issue: Need for robust client and server-side validation
+Solution: React Hook Form + Zod validation on both ends
+Impact: Improved data integrity and user experience
+
+10. Implementation Roadmap
+
+10.1 Phase 1: Database Foundation (Priority: High)
+Update Prisma schema with enhanced models for virtual sessions, verification requests, notifications
+Implement database migrations and seed data for new tables
+Create comprehensive audit trail system with cryptographic integrity
+Set up system settings management for configurable parameters
+
+10.2 Phase 2: Core Feature Enhancement (Priority: High)
+Enhance geolocation verification with multiple fallback methods
+Implement class representative verification workflow with evidence upload
+Develop virtual session management with meeting platform integration
+Create advanced notification system with multi-channel support
+
+10.3 Phase 3: Dashboard & Analytics (Priority: High)
+Build world-class visual dashboard with Chart.js and D3.js
+Implement real-time analytics with live data updates
+Create customizable widgets for different user roles
+Develop predictive analytics for attendance patterns
+Add heatmaps and comparative analysis features
+
+10.4 Phase 4: Mobile & PWA (Priority: Medium)
+Implement Progressive Web App capabilities with offline support
+Optimize mobile interface for class representatives
+Add push notification support across platforms
+Develop touch-friendly interface with gesture support
+
+10.5 Phase 5: Advanced Features (Priority: Medium)
+Implement automated report generation and scheduling
+Add advanced role-based permissions with granular controls
+Develop integration APIs for external systems
+Create comprehensive backup and disaster recovery system
+
+11. Future Considerations
+
+11.1 Scalability Enhancements
+Production Neon deployment considerations: connection pooling, branching, and scaling
+Microservices architecture for high-traffic scenarios
+CDN integration for global content delivery
+Load balancing and horizontal scaling strategies
+
+11.2 Advanced Analytics
+Machine learning models for attendance prediction
+Behavioral analytics for academic performance correlation
+Advanced reporting with natural language generation
+Integration with business intelligence tools
+
+11.3 Integration Capabilities
+LMS integration (Moodle, Canvas, Blackboard)
+Student Information System (SIS) connectivity
+HR system integration for lecturer management
+Financial system integration for billing and payments
+
+11.4 Security Enhancements
+Two-factor authentication implementation
+Biometric verification for high-security environments
+Advanced threat detection and prevention
+Compliance with international data protection regulations (GDPR, etc.)
+ 
+12. Build & Runtime Stability (Next.js 15 + React 19, Neon DB)
+
+12.1 Runtime Error Avoidance (next-auth/react)
+- Do not import `next-auth/react` in client components/pages. Use server-only `getServerSession` in route handlers and server components.
+- For client session needs, use a custom session fetcher (e.g., `src/lib/client-session.ts` that calls `GET /api/auth/session`).
+- Add a webpack alias to neutralize accidental `next-auth/react` imports:
+  - In `next.config.js/ts`, alias `next-auth/react` to a local shim (e.g., `src/lib/next-auth-react-shim.ts`) that exports no-op stubs.
+- After changing config, clear the Next cache (`rm -rf .next` on Unix or delete `.next` on Windows) and restart the dev server.
+
+12.2 Recommended Versions & Environment
+- Node `>= 20.11.x` (LTS) for stability.
+- Next.js `^15.x` and React `^19.x` with App Router.
+- Ensure TypeScript strict mode remains enabled.
+
+12.3 Build & Start Commands
+- Development: `npm ci` then `npm run dev`.
+- Production: `npm ci && npm run build && npm run start`.
+- Always clear `.next` after config alias or major dependency changes.
+
+12.4 NextAuth Server-Only Pattern
+- Configure NextAuth in `app/api/auth/[...nextauth]/route.ts` (App Router) and use `getServerSession` in server contexts.
+- Client redirects should rely on server session checks or `/api/auth/session` calls; avoid `SessionProvider` unless using a neutral wrapper.
+
+12.5 Neon (PostgreSQL) Setup
+- Use Neon for production and staging databases. Recommended env vars:
+  - `DATABASE_URL` (Neon connection string, include `sslmode=require` and `?pgbouncer=true&connection_limit=1` for Prisma)
+  - `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+- Prisma: set `provider = "postgresql"` in your production schema (e.g., `prisma/schema.production.prisma`).
+- Migrations: `npx prisma generate && npx prisma migrate deploy` during deploy.
+- Prefer Neon Branching for safe schema changes; use `NEON_MIGRATION_GUIDE.md` for detailed steps.
+
+12.6 Operational Safeguards
+- Middleware route matching should exclude static assets to reduce overhead.
+- Avoid importing server-only packages in client code.
+- Monitor logs for bundling warnings; if `next-auth/react` appears, re-check client imports and alias.
+
+12.7 Troubleshooting Checklist
+- Error mentions `next-auth/react/index.js`: verify no client imports; confirm alias exists; clear `.next`; restart.
+- Build fails after dependency upgrade: remove `.next`, lock `node_modules` with `npm ci`, re-run build.
+- Database connection issues: verify Neon project, branch, and `DATABASE_URL` includes required SSL and pgbouncer params.

@@ -50,43 +50,35 @@ export async function GET(
       }
     }
 
-    // Fetch attendance records for this schedule
+    // Fetch attendance records for this schedule (Sessions)
     const attendanceRecords = await prisma.attendanceRecord.findMany({
       where: {
         courseScheduleId: scheduleId
       },
       include: {
-        student: {
+        lecturer: {
           include: {
-            profile: true
+            user: true
           }
         }
       },
       orderBy: [
-        { attendanceDate: 'desc' },
-        { student: { profile: { firstName: 'asc' } } }
+        { timestamp: 'desc' }
       ]
     });
 
     // Format the response
     const formattedRecords = attendanceRecords.map(record => ({
       id: record.id,
-      attendanceDate: record.attendanceDate,
-      status: record.status,
-      checkInTime: record.checkInTime,
-      checkOutTime: record.checkOutTime,
-      location: record.location,
+      attendanceDate: record.timestamp,
+      status: record.supervisorVerified === true ? 'Verified' : (record.supervisorVerified === false ? 'Disputed' : 'Pending'),
+      checkInTime: record.timestamp,
+      checkOutTime: record.sessionEndTime,
+      location: record.method,
       remarks: record.remarks,
-      createdAt: record.createdAt,
-      student: {
-        id: record.student.id,
-        email: record.student.email,
-        studentId: record.student.studentId,
-        profile: {
-          firstName: record.student.profile?.firstName,
-          lastName: record.student.profile?.lastName,
-          phoneNumber: record.student.profile?.phoneNumber
-        }
+      lecturer: {
+        id: record.lecturer.id,
+        name: record.lecturer.user ? `${record.lecturer.user.firstName} ${record.lecturer.user.lastName}` : 'Unknown'
       }
     }));
 
@@ -104,154 +96,8 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  const params = await props.params;
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const userRole = session.user.role;
-    const userId = session.user.id;
-
-    // Only lecturers can create attendance records
-    if (userRole !== 'LECTURER') {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    const scheduleId = params.id;
-    
-    // Verify lecturer owns this schedule
-    const lecturer = await prisma.lecturer.findUnique({
-        where: { userId: userId }
-    });
-
-    const schedule = await prisma.courseSchedule.findUnique({
-      where: { id: scheduleId },
-      include: {
-        classGroup: {
-          include: {
-            students: true
-          }
-        }
-      }
-    });
-
-    if (!schedule || !lecturer || schedule.lecturerId !== lecturer.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { attendanceDate, studentAttendance } = body;
-
-    if (!attendanceDate || !Array.isArray(studentAttendance)) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Validate attendance date
-    const date = new Date(attendanceDate);
-    if (isNaN(date.getTime())) {
-      return NextResponse.json(
-        { error: 'Invalid attendance date' },
-        { status: 400 }
-      );
-    }
-
-    // Check if attendance already exists for this date
-    const existingAttendance = await prisma.attendanceRecord.findFirst({
-      where: {
-        courseScheduleId: scheduleId,
-        attendanceDate: date
-      }
-    });
-
-    if (existingAttendance) {
-      return NextResponse.json(
-        { error: 'Attendance already recorded for this date' },
-        { status: 400 }
-      );
-    }
-
-    // Create attendance records
-    const attendanceRecords = [];
-    
-    for (const attendance of studentAttendance) {
-      const { studentId, status, checkInTime, checkOutTime, location, remarks } = attendance;
-      
-      if (!studentId || !status) {
-        continue; // Skip invalid records
-      }
-
-      // Verify student is in the class group
-      const studentInClass = schedule.classGroup.students.find(s => s.id === studentId);
-      if (!studentInClass) {
-        continue; // Skip students not in this class
-      }
-
-      const record = await prisma.attendanceRecord.create({
-        data: {
-          courseScheduleId: scheduleId,
-          studentId,
-          attendanceDate: date,
-          status,
-          checkInTime: checkInTime ? new Date(checkInTime) : null,
-          checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
-          location: location || null,
-          remarks: remarks || null
-        },
-        include: {
-          student: {
-            include: {
-              profile: true
-            }
-          }
-        }
-      });
-
-      attendanceRecords.push({
-        id: record.id,
-        attendanceDate: record.attendanceDate,
-        status: record.status,
-        checkInTime: record.checkInTime,
-        checkOutTime: record.checkOutTime,
-        location: record.location,
-        remarks: record.remarks,
-        createdAt: record.createdAt,
-        student: {
-          id: record.student.id,
-          email: record.student.email,
-          studentId: record.student.studentId,
-          profile: {
-            firstName: record.student.profile?.firstName,
-            lastName: record.student.profile?.lastName,
-            phoneNumber: record.student.profile?.phoneNumber
-          }
-        }
-      });
-    }
-
-    return NextResponse.json({
-      message: 'Attendance recorded successfully',
-      records: attendanceRecords
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating attendance records:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+        { error: 'Method not implemented' },
+        { status: 501 }
     );
-  }
 }

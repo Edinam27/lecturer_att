@@ -13,7 +13,7 @@ interface Course {
   semester: number
   isElective: boolean
   description: string
-  createdAt: string
+  // createdAt: string // Removed as it does not exist in schema
   programme: {
     id: string
     name: string
@@ -29,6 +29,7 @@ export default function CoursesPage() {
   const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
   const [semesterFilter, setSemesterFilter] = useState('all')
 
@@ -100,6 +101,21 @@ export default function CoursesPage() {
           Manage courses across all programmes
         </p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
         <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2">
@@ -204,10 +220,7 @@ export default function CoursesPage() {
                 )}
                 
                 <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                  <span className="text-xs text-gray-400">
-                    Created: {new Date(course.createdAt).toLocaleDateString()}
-                  </span>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 ml-auto">
                     <Link
                       href={`/dashboard/courses/${course.id}`}
                       className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"

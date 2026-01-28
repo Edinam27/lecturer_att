@@ -94,13 +94,13 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
       setCourse(courseData)
       setProgrammes(programmesData)
       setFormData({
-        courseCode: courseData.courseCode,
-        title: courseData.title,
+        courseCode: courseData.courseCode || '',
+        title: courseData.title || '',
         description: courseData.description || '',
-        creditHours: courseData.creditHours,
-        semester: courseData.semester,
-        isElective: courseData.isElective,
-        programmeId: courseData.programmeId
+        creditHours: courseData.creditHours || courseData.credits || 0,
+        semester: courseData.semesterLevel || courseData.semester || 1,
+        isElective: courseData.isElective ?? false,
+        programmeId: courseData.programme?.id || courseData.programmeId || ''
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -141,7 +141,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-               type === 'number' ? parseInt(value) || 0 : value
+               type === 'number' || name === 'semester' || name === 'creditHours' ? parseInt(value) || 0 : value
     }))
   }
 
@@ -243,7 +243,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
                 type="text"
                 id="courseCode"
                 name="courseCode"
-                value={formData.courseCode}
+                value={formData.courseCode ?? ''}
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -259,11 +259,10 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
                 type="number"
                 id="creditHours"
                 name="creditHours"
-                value={formData.creditHours}
+                value={formData.creditHours ?? ''}
                 onChange={handleChange}
                 required
                 min="1"
-                max="6"
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -277,7 +276,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
               type="text"
               id="title"
               name="title"
-              value={formData.title}
+              value={formData.title ?? ''}
               onChange={handleChange}
               required
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -308,7 +307,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
               <select
                 id="programmeId"
                 name="programmeId"
-                value={formData.programmeId}
+                value={formData.programmeId ?? ''}
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
