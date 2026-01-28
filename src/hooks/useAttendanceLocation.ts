@@ -69,8 +69,11 @@ export function useAttendanceLocation() {
         });
       } catch (err: any) {
         // If timeout (3) or unavailable (2), try with low accuracy
-        if (err.code === 3 || err.code === 2) {
-          console.warn('High accuracy location failed, retrying with low accuracy...', err);
+        if (err?.code === 3 || err?.code === 2) {
+          console.warn('High accuracy location failed, retrying with low accuracy...', {
+            code: err.code,
+            message: err.message
+          });
           position = await getPosition({
             enableHighAccuracy: false,
             timeout: 15000,
@@ -91,17 +94,22 @@ export function useAttendanceLocation() {
       setLoading(false);
       return newLocation;
     } catch (err: any) {
-      console.error('Error getting location:', err);
+      console.error('Error getting location:', {
+        code: err?.code,
+        message: err?.message,
+        name: err?.name,
+        error: err
+      });
       let errorMessage = 'Failed to get location';
       
       // Handle GeolocationPositionError codes
-      if (err.code === 1) {
+      if (err?.code === 1) {
         errorMessage = 'Location permission denied. Please allow location access in your browser settings.';
-      } else if (err.code === 2) {
+      } else if (err?.code === 2) {
         errorMessage = 'Location unavailable. Ensure your device has GPS/Location enabled.';
-      } else if (err.code === 3) {
+      } else if (err?.code === 3) {
         errorMessage = 'Location request timed out. Please try again.';
-      } else if (err.message) {
+      } else if (err?.message) {
         errorMessage = err.message;
       }
       
