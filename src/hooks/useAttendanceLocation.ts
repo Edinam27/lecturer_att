@@ -126,7 +126,7 @@ export function useAttendanceLocation() {
       
       // Handle GeolocationPositionError codes
       if (err?.code === 1) {
-        errorMessage = 'Location permission denied. Please allow location access in your browser settings.';
+        errorMessage = 'Location access denied. Please check: 1. Browser site settings (allow location). 2. OS system settings (enable location services for this browser).';
       } else if (err?.code === 2) {
         errorMessage = 'Location unavailable. Ensure your device has GPS/Location enabled.';
       } else if (err?.code === 3) {
