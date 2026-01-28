@@ -51,18 +51,35 @@ export function useAttendanceLocation() {
       return null;
     }
 
+    const getPosition = (options: PositionOptions): Promise<GeolocationPosition> => {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    };
+
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          (err) => reject(err),
-          {
-            enableHighAccuracy: true,
+      let position: GeolocationPosition;
+      
+      try {
+        // First attempt with high accuracy
+        position = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 10000
+        });
+      } catch (err: any) {
+        // If timeout (3) or unavailable (2), try with low accuracy
+        if (err.code === 3 || err.code === 2) {
+          console.warn('High accuracy location failed, retrying with low accuracy...', err);
+          position = await getPosition({
+            enableHighAccuracy: false,
             timeout: 15000,
             maximumAge: 10000
-          }
-        );
-      });
+          });
+        } else {
+          throw err;
+        }
+      }
 
       const newLocation = {
         latitude: position.coords.latitude,
@@ -76,9 +93,17 @@ export function useAttendanceLocation() {
     } catch (err: any) {
       console.error('Error getting location:', err);
       let errorMessage = 'Failed to get location';
-      if (err.code === 1) errorMessage = 'Location permission denied';
-      else if (err.code === 2) errorMessage = 'Location unavailable';
-      else if (err.code === 3) errorMessage = 'Location request timed out';
+      
+      // Handle GeolocationPositionError codes
+      if (err.code === 1) {
+        errorMessage = 'Location permission denied. Please allow location access in your browser settings.';
+      } else if (err.code === 2) {
+        errorMessage = 'Location unavailable. Ensure your device has GPS/Location enabled.';
+      } else if (err.code === 3) {
+        errorMessage = 'Location request timed out. Please try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
       
       setError(errorMessage);
       setLoading(false);
