@@ -530,11 +530,35 @@ export default function TakeAttendancePage() {
                         </button>
                         {locationError && (
                           <div className="mt-2">
-                            <p className="text-sm text-red-600">{locationError}</p>
+                            <p className="text-sm text-red-600 font-medium">{locationError}</p>
+                            
+                            <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+                              <p className="font-semibold mb-2">Troubleshooting Steps:</p>
+                              <ul className="list-disc pl-5 space-y-1 text-gray-700">
+                                <li>Click the lock icon 🔒 in your address bar and ensure Location is "Allowed".</li>
+                                <li>If using Windows/macOS, check System Settings &gt; Privacy &gt; Location Services.</li>
+                                <li>Try reloading the page.</li>
+                              </ul>
+                              
+                              <button 
+                                onClick={() => {
+                                  if (!navigator.geolocation) return alert('Geolocation not supported');
+                                  navigator.geolocation.getCurrentPosition(
+                                    (pos) => alert(`Success! Lat: ${pos.coords.latitude}, Long: ${pos.coords.longitude}`),
+                                    (err) => alert(`Direct Error: Code ${err.code} - ${err.message}`),
+                                    { enableHighAccuracy: false, timeout: 10000 }
+                                  );
+                                }}
+                                className="mt-3 px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-xs border border-gray-300"
+                              >
+                                Test Browser Location Directly
+                              </button>
+                            </div>
+
                             {locationDiagnostics && (
-                              <details className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-500">
-                                <summary className="cursor-pointer hover:text-gray-700">View Troubleshooting Info</summary>
-                                <pre className="mt-2 whitespace-pre-wrap overflow-x-auto">
+                              <details className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-500">
+                                <summary className="cursor-pointer hover:text-gray-700 font-medium">View Technical Logs</summary>
+                                <pre className="mt-2 whitespace-pre-wrap overflow-x-auto bg-white p-2 border rounded">
                                   {JSON.stringify(locationDiagnostics, null, 2)}
                                 </pre>
                               </details>

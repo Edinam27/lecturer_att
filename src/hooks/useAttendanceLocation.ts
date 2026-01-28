@@ -78,11 +78,9 @@ export function useAttendanceLocation() {
         console.log('Geolocation permission status:', permissionStatus.state);
         diagnostics.permissionState = permissionStatus.state;
         
+        // Log but don't block - let getCurrentPosition be the source of truth
         if (permissionStatus.state === 'denied') {
-          setError('Location permission is blocked. Please reset permissions in your browser address bar.');
-          setLoading(false);
-          setLocationDiagnostics(diagnostics);
-          return null;
+          console.warn('Permissions API reports denied, but proceeding with request anyway');
         }
       } catch (e) {
         console.warn('Error checking permissions:', e);
