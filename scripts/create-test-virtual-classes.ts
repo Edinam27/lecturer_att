@@ -1,137 +1,148 @@
-
 import { PrismaClient, SessionType } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🚀 Creating virtual classes for tonight...')
+  console.log('🚀 Creating Thursday virtual classes...')
 
-  // 1. Get today's date info
-  const today = new Date()
-  const dayOfWeek = today.getDay()
-  console.log(`📅 Date: ${today.toISOString().split('T')[0]}, Day of Week: ${dayOfWeek}`)
+  // Force Thursday (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu)
+  const dayOfWeek = 4
+  console.log(`📅 Target Day: Thursday (dayOfWeek=${dayOfWeek})`)
 
-  // 2. Find necessary data (Lecturers, Courses, ClassGroups)
-  // We'll try to fetch a few to distribute the schedules
+  // 1. Find necessary data
   const lecturers = await prisma.lecturer.findMany({
-    take: 3,
+    take: 4, // Need 4 lecturers for 4 classes
     include: { user: true }
   })
   
   const courses = await prisma.course.findMany({
-    take: 3
+    take: 4
   })
 
   const classGroups = await prisma.classGroup.findMany({
-    take: 3
+    take: 4
   })
 
-  if (lecturers.length === 0 || courses.length === 0 || classGroups.length === 0) {
-    console.error('❌ Missing seed data (lecturers, courses, or class groups). Please run db:seed first.')
+  if (lecturers.length < 1 || courses.length < 1 || classGroups.length < 1) {
+    console.error('❌ Missing seed data. Need at least 1 lecturer, course, and class group.')
     return
   }
 
-  // 3. Find or Create a Virtual Classroom
+  // 2. Find or Create a Virtual Classroom
   let virtualRoom = await prisma.classroom.findFirst({
     where: { roomType: 'Virtual' }
   })
 
   if (!virtualRoom) {
-    // Create one if not exists
     const building = await prisma.building.findFirst()
-    if (!building) throw new Error('No building found to attach classroom to')
-    
-    virtualRoom = await prisma.classroom.create({
-      data: {
-        roomCode: 'VIRTUAL-TEST-01',
-        name: 'Test Virtual Room 1',
-        buildingId: building.id,
-        roomType: 'Virtual',
-        virtualLink: 'https://zoom.us/j/1234567890',
-        availabilityStatus: 'available'
-      }
-    })
-    console.log('✨ Created new virtual classroom')
+    if (building) {
+        virtualRoom = await prisma.classroom.create({
+        data: {
+            roomCode: 'VIRTUAL-001',
+            name: 'Zoom Room 1',
+            buildingId: building.id,
+            roomType: 'Virtual',
+            virtualLink: 'https://zoom.us/my/defaultroom',
+            availabilityStatus: 'available'
+        }
+        })
+        console.log('✨ Created new virtual classroom')
+    } else {
+        console.log('⚠️ No building found, creating schedule without classroom relation (using meetingLink only)')
+    }
   }
 
-  // 4. Create Schedules
-  // We will create 3 sessions for "tonight"
-  const schedulesToCreate = [
+  // 3. Define the 4 virtual sessions for Thursday
+  const sessions = [
     {
-      time: '18:00',
-      endTime: '19:30',
-      type: SessionType.VIRTUAL,
+      startTime: '08:00',
+      endTime: '10:00',
       lecturerIdx: 0,
       courseIdx: 0,
-      groupIdx: 0
+      groupIdx: 0,
+      link: 'https://zoom.us/j/THURSDAY1'
     },
     {
-      time: '19:00',
-      endTime: '20:30',
-      type: SessionType.HYBRID,
-      lecturerIdx: 1,
-      courseIdx: 1,
-      groupIdx: 1
+      startTime: '10:30',
+      endTime: '12:30',
+      lecturerIdx: 1 % lecturers.length,
+      courseIdx: 1 % courses.length,
+      groupIdx: 1 % classGroups.length,
+      link: 'https://teams.microsoft.com/l/meetup-join/THURSDAY2'
     },
     {
-      time: '20:00',
-      endTime: '21:30',
-      type: SessionType.VIRTUAL,
+      startTime: '13:00',
+      endTime: '15:00',
       lecturerIdx: 2 % lecturers.length,
       courseIdx: 2 % courses.length,
-      groupIdx: 2 % classGroups.length
+      groupIdx: 2 % classGroups.length,
+      link: 'https://meet.google.com/THURSDAY3'
+    },
+    {
+      startTime: '15:30',
+      endTime: '17:30',
+      lecturerIdx: 3 % lecturers.length,
+      courseIdx: 3 % courses.length,
+      groupIdx: 3 % classGroups.length,
+      link: 'https://zoom.us/j/THURSDAY4'
     }
   ]
 
-  for (const item of schedulesToCreate) {
-    const lecturer = lecturers[item.lecturerIdx]
-    const course = courses[item.courseIdx]
-    const group = classGroups[item.groupIdx]
+  for (const session of sessions) {
+    const lecturer = lecturers[session.lecturerIdx]
+    const course = courses[session.courseIdx]
+    const group = classGroups[session.groupIdx]
 
-    // Check collision
-    const existing = await prisma.courseSchedule.findFirst({
+    console.log(`Processing: ${lecturer.user.firstName} ${lecturer.user.lastName} - ${course.courseCode} (${session.startTime})`)
+
+    // Check for existing schedule to avoid unique constraint errors
+    const existingSchedule = await prisma.courseSchedule.findUnique({
       where: {
-        lecturerId: lecturer.id,
-        dayOfWeek: dayOfWeek,
-        startTime: item.time
+        courseId_classGroupId_dayOfWeek_startTime: {
+          courseId: course.id,
+          classGroupId: group.id,
+          dayOfWeek: dayOfWeek,
+          startTime: session.startTime
+        }
       }
     })
 
-    if (existing) {
-      console.log(`⚠️ Schedule already exists for ${lecturer.user.firstName} at ${item.time}. Skipping.`)
-      
-      // Update it to be VIRTUAL/HYBRID if it's not, just in case
-      if (existing.sessionType !== item.type) {
-         await prisma.courseSchedule.update({
-            where: { id: existing.id },
-            data: { sessionType: item.type, classroomId: virtualRoom.id }
-         })
-         console.log(`   -> Updated existing schedule to ${item.type}`)
+    if (existingSchedule) {
+      console.log(`⚠️ Schedule already exists. Updating to VIRTUAL...`)
+      await prisma.courseSchedule.update({
+        where: { id: existingSchedule.id },
+        data: {
+          sessionType: SessionType.VIRTUAL,
+          meetingLink: session.link,
+          classroomId: virtualRoom?.id,
+          lecturerId: lecturer.id
+        }
+      })
+      console.log(`✅ Updated schedule ${existingSchedule.id}`)
+    } else {
+      try {
+        const newSchedule = await prisma.courseSchedule.create({
+          data: {
+            courseId: course.id,
+            classGroupId: group.id,
+            lecturerId: lecturer.id,
+            dayOfWeek: dayOfWeek,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            sessionType: SessionType.VIRTUAL,
+            meetingLink: session.link,
+            classroomId: virtualRoom?.id,
+            isOverload: false
+          }
+        })
+        console.log(`✅ Created new schedule ${newSchedule.id}`)
+      } catch (error) {
+        console.error(`❌ Failed to create schedule:`, error)
       }
-      continue
     }
-
-    const schedule = await prisma.courseSchedule.create({
-      data: {
-        courseId: course.id,
-        classGroupId: group.id,
-        lecturerId: lecturer.id,
-        dayOfWeek: dayOfWeek,
-        startTime: item.time,
-        endTime: item.endTime,
-        classroomId: virtualRoom.id,
-        sessionType: item.type
-      }
-    })
-
-    console.log(`✅ Created ${item.type} class:`)
-    console.log(`   Time: ${item.time} - ${item.endTime}`)
-    console.log(`   Course: ${course.courseCode}`)
-    console.log(`   Lecturer: ${lecturer.user.firstName} ${lecturer.user.lastName}`)
-    console.log(`   Link: ${virtualRoom.virtualLink}`)
   }
 
-  console.log('\n🎉 Done! You can now check the Online Supervisor dashboard.')
+  console.log('\n🎉 Thursday virtual classes setup complete!')
 }
 
 main()

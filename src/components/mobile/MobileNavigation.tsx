@@ -51,7 +51,7 @@ export default function MobileNavigation() {
     setIsSigningOut(true);
     setIsMenuOpen(false);
     try {
-      await signOut({ callbackUrl: '/auth/signin' });
+      await signOut({ callbackUrl: `${window.location.origin}/auth/signin` });
     } catch (error) {
       setIsSigningOut(false);
     }

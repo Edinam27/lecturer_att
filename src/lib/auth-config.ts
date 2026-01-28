@@ -123,6 +123,18 @@ export const authOptions: NextAuthOptions = {
         session.user.lecturerId = token.lecturerId as string
       }
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+
+      // Allows callback URLs on the same origin
+      if (new URL(url).origin === baseUrl) return url
+
+      // Explicitly allow production domain for signout redirects
+      if (url.startsWith('https://lecturer-att.onrender.com')) return url
+
+      return baseUrl
     }
   },
   pages: {

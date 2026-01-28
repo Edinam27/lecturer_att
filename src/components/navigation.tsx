@@ -104,7 +104,7 @@ export function Navigation() {
     if (isSigningOut) return // Prevent multiple clicks
     setIsSigningOut(true)
     try {
-      await signOut({ callbackUrl: '/auth/signin' })
+      await signOut({ callbackUrl: `${window.location.origin}/auth/signin` })
     } catch (error) {
       setIsSigningOut(false) // Reset on error
     }
