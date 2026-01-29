@@ -1,7 +1,7 @@
 // UPSA Graduate School coordinates (Accra, Ghana)
 const UPSA_COORDINATES = {
-  latitude: parseFloat(process.env.UPSA_GPS_LATITUDE || '5.6037'),
-  longitude: parseFloat(process.env.UPSA_GPS_LONGITUDE || '-0.1870')
+  latitude: parseFloat(process.env.UPSA_GPS_LATITUDE || '5.6508'),
+  longitude: parseFloat(process.env.UPSA_GPS_LONGITUDE || '-0.1662')
 }
 
 const UPSA_RADIUS = parseInt(process.env.UPSA_GPS_RADIUS || '300') // meters

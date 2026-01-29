@@ -6,8 +6,8 @@
 import '@testing-library/jest-dom'
 
 // Mock environment variables for testing
-process.env.UPSA_GPS_LATITUDE = '5.6037'
-process.env.UPSA_GPS_LONGITUDE = '-0.1870'
+process.env.UPSA_GPS_LATITUDE = '5.6508'
+process.env.UPSA_GPS_LONGITUDE = '-0.1662'
 process.env.UPSA_GPS_RADIUS = '300'
 process.env.NEXTAUTH_SECRET = 'test-secret'
 process.env.NEXTAUTH_URL = 'http://localhost:3000'

@@ -304,8 +304,8 @@ async function main() {
       name: 'Main Academic Building',
       description: 'Primary academic building for graduate school',
       address: 'UPSA Graduate School, Accra',
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      gpsLatitude: 5.6508,
+      gpsLongitude: -0.1662,
       totalFloors: 4
     },
     {
@@ -313,8 +313,8 @@ async function main() {
       name: 'Annex Building',
       description: 'Secondary academic building',
       address: 'UPSA Graduate School Annex, Accra',
-      gpsLatitude: 5.6040,
-      gpsLongitude: -0.1875,
+      gpsLatitude: 5.6510,
+      gpsLongitude: -0.1665,
       totalFloors: 3
     },
     {
@@ -322,8 +322,8 @@ async function main() {
       name: 'Executive Education Center',
       description: 'Executive education and conference center',
       address: 'UPSA Executive Center, Accra',
-      gpsLatitude: 5.6035,
-      gpsLongitude: -0.1865,
+      gpsLatitude: 5.6506,
+      gpsLongitude: -0.1660,
       totalFloors: 2
     }
   ]
@@ -348,8 +348,8 @@ async function main() {
       capacity: 80,
       roomType: 'Lecture Hall',
       equipmentList: JSON.stringify(['Projector', 'Sound System', 'Whiteboard', 'Air Conditioning']),
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      gpsLatitude: 5.6508,
+      gpsLongitude: -0.1662,
       availabilityStatus: 'available'
     },
     {
@@ -359,8 +359,8 @@ async function main() {
       capacity: 60,
       roomType: 'Lecture Hall',
       equipmentList: JSON.stringify(['Projector', 'Sound System', 'Whiteboard']),
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      gpsLatitude: 5.6508,
+      gpsLongitude: -0.1662,
       availabilityStatus: 'available'
     },
     {
@@ -370,8 +370,8 @@ async function main() {
       capacity: 30,
       roomType: 'Seminar Room',
       equipmentList: JSON.stringify(['Projector', 'Whiteboard', 'Round Tables']),
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      gpsLatitude: 5.6508,
+      gpsLongitude: -0.1662,
       availabilityStatus: 'available'
     },
     {
@@ -381,8 +381,8 @@ async function main() {
       capacity: 25,
       roomType: 'Seminar Room',
       equipmentList: JSON.stringify(['Projector', 'Whiteboard']),
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      gpsLatitude: 5.6508,
+      gpsLongitude: -0.1662,
       availabilityStatus: 'available'
     },
     // Annex Building Classrooms
@@ -393,8 +393,8 @@ async function main() {
       capacity: 40,
       roomType: 'Workshop Room',
       equipmentList: JSON.stringify(['Projector', 'Flipcharts', 'Group Tables']),
-      gpsLatitude: 5.6040,
-      gpsLongitude: -0.1875,
+      gpsLatitude: 5.6510,
+      gpsLongitude: -0.1665,
       availabilityStatus: 'available'
     },
     {
@@ -404,8 +404,8 @@ async function main() {
       capacity: 35,
       roomType: 'Computer Lab',
       equipmentList: JSON.stringify(['Computers', 'Projector', 'Software']),
-      gpsLatitude: 5.6040,
-      gpsLongitude: -0.1875,
+      gpsLatitude: 5.6510,
+      gpsLongitude: -0.1665,
       availabilityStatus: 'available'
     },
     // Executive Center
@@ -416,8 +416,8 @@ async function main() {
       capacity: 20,
       roomType: 'Boardroom',
       equipmentList: JSON.stringify(['Video Conferencing', 'Projector', 'Executive Furniture']),
-      gpsLatitude: 5.6035,
-      gpsLongitude: -0.1865,
+      gpsLatitude: 5.6506,
+      gpsLongitude: -0.1660,
       availabilityStatus: 'available'
     },
     // Virtual Classrooms
