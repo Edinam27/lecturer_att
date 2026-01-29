@@ -290,7 +290,7 @@ export default function MobileAttendanceRecorder() {
       )}
 
       {/* Main Content */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 pb-32">
         {/* Quick Actions */}
         <MobileCard>
           <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
@@ -406,21 +406,22 @@ export default function MobileAttendanceRecorder() {
             ))}
           </div>
         </MobileCard>
-      </div>
 
-      {/* Notes Input */}
-      <div className="fixed bottom-20 left-0 right-0 bg-white border-t border-gray-200 p-4">
-        <textarea
-          value={attendanceNotes}
-          onChange={(e) => setAttendanceNotes(e.target.value)}
-          placeholder="Add notes about this session (optional)..."
-          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mb-3"
-          rows={2}
-        />
+        {/* Notes Input */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <h3 className="font-semibold text-gray-900 mb-2">Session Notes</h3>
+          <textarea
+            value={attendanceNotes}
+            onChange={(e) => setAttendanceNotes(e.target.value)}
+            placeholder="Add notes about this session (optional)..."
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            rows={3}
+          />
+        </div>
       </div>
 
       {/* Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-30">
         <button
           onClick={submitAttendance}
           disabled={submitting || totalCount === 0}
