@@ -22,7 +22,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
       <main className={`
-        ${shouldShowMobileNav ? 'pb-32 md:pb-0' : ''} 
+        ${shouldShowMobileNav ? 'pb-48 md:pb-0' : ''} 
         ${isMobilePage ? 'mobile-app-container' : ''}
       `}>
         {children}
@@ -74,7 +74,7 @@ export function MobilePageWrapper({
       )}
       
       {/* Page Content */}
-      <div className="flex-1 overflow-auto pb-32">
+      <div className="flex-1 overflow-auto pb-48">
         {children}
       </div>
     </div>
