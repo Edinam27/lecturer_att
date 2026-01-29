@@ -96,12 +96,14 @@ export default async function RootLayout({
         <link rel="apple-touch-startup-image" href="/splash/apple-splash-640-1136.jpg" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
         suppressHydrationWarning={true}
       >
         <SessionWrapper initialSession={session}>
           <PWAProvider>
-            {children}
+            <div className="flex-1 flex flex-col">
+              {children}
+            </div>
             <MobileNavigation />
             <QuickActionFAB />
           </PWAProvider>

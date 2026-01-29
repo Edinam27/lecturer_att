@@ -69,7 +69,7 @@ export default function MobileNavigation() {
   return (
     <>
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom z-40 md:hidden">
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-bottom z-40 md:hidden mt-auto">
         <div className="grid grid-cols-4 h-16">
           {filteredItems.slice(0, 3).map((item) => {
             const Icon = isActive(item.href) ? item.solidIcon : item.icon;

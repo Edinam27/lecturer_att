@@ -290,7 +290,7 @@ export default function MobileAttendanceRecorder() {
       )}
 
       {/* Main Content */}
-      <div className="p-4 space-y-4 pb-48">
+      <div className="p-4 space-y-4">
         {/* Quick Actions */}
         <MobileCard>
           <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>

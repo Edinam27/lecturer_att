@@ -22,7 +22,6 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Main Content */}
       <main className={`
-        ${shouldShowMobileNav ? 'pb-48 md:pb-0' : ''} 
         ${isMobilePage ? 'mobile-app-container' : ''}
       `}>
         {children}
@@ -46,7 +45,7 @@ export function MobilePageWrapper({
   onBack 
 }: MobilePageWrapperProps) {
   return (
-    <div className="mobile-app-container bg-white flex flex-col h-screen">
+    <div className="mobile-app-container bg-white flex flex-col h-full">
       {/* Mobile Header */}
       {(title || showBackButton) && (
         <div className="bg-white border-b border-gray-200 safe-area-top flex-none z-30 relative">
@@ -74,7 +73,7 @@ export function MobilePageWrapper({
       )}
       
       {/* Page Content */}
-      <div className="flex-1 overflow-auto pb-48">
+      <div className="flex-1 overflow-auto">
         {children}
       </div>
     </div>
