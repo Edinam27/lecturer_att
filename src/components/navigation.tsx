@@ -19,6 +19,11 @@ const navigationItems: NavigationItem[] = [
     roles: ['ADMIN', 'COORDINATOR', 'LECTURER', 'CLASS_REP', 'SUPERVISOR', 'ONLINE_SUPERVISOR']
   },
   {
+    name: 'Notifications',
+    href: '/dashboard/notifications/preferences',
+    roles: ['ADMIN', 'LECTURER', 'SUPERVISOR', 'ONLINE_SUPERVISOR', 'COORDINATOR']
+  },
+  {
     name: 'Verify Classes',
     href: '/dashboard/supervisor',
     roles: ['SUPERVISOR']

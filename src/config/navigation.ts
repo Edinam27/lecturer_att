@@ -13,7 +13,8 @@ import {
   ClipboardIcon,
   ArrowUpTrayIcon,
   ComputerDesktopIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeSolidIcon,
@@ -29,7 +30,8 @@ import {
   ClipboardIcon as ClipboardSolidIcon2,
   ArrowUpTrayIcon as ArrowUpTraySolidIcon,
   ComputerDesktopIcon as ComputerDesktopSolidIcon,
-  CheckCircleIcon as CheckCircleSolidIcon
+  CheckCircleIcon as CheckCircleSolidIcon,
+  BellIcon as BellSolidIcon
 } from '@heroicons/react/24/solid';
 import { UserRole } from '@prisma/client';
 
@@ -49,6 +51,13 @@ export const navigationItems: NavigationItem[] = [
     icon: HomeIcon,
     solidIcon: HomeSolidIcon,
     roles: ['ADMIN', 'COORDINATOR', 'LECTURER', 'CLASS_REP', 'SUPERVISOR', 'ONLINE_SUPERVISOR']
+  },
+  {
+    name: 'Notifications',
+    href: '/dashboard/notifications/preferences',
+    icon: BellIcon,
+    solidIcon: BellSolidIcon,
+    roles: ['ADMIN', 'LECTURER', 'SUPERVISOR', 'ONLINE_SUPERVISOR', 'COORDINATOR']
   },
   {
     name: 'Verify Classes',
