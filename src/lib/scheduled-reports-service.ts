@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { generateReport, calculateNextRun } from '@/lib/report-generator'
 import { emailService } from '@/lib/email'
 import { notifyReportGenerated } from '@/lib/notifications'
+import { notificationScheduler } from '@/lib/notification-scheduler'
 import * as cron from 'node-cron'
 
 export class ScheduledReportsService {
@@ -32,6 +33,11 @@ export class ScheduledReportsService {
     this.intervalId = setInterval(() => {
       this.processDueReports().catch(error => {
         console.error('Error processing due reports:', error)
+      })
+      
+      // Check for upcoming classes
+      notificationScheduler.checkUpcomingClasses().catch(error => {
+        console.error('Error checking upcoming classes:', error)
       })
     }, 60 * 1000) // Check every minute
     

@@ -225,6 +225,30 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.DATA_IMPORT,
     Permission.DATA_EXPORT,
   ],
+
+  [UserRole.SUPERVISOR]: [
+    // Supervisor access
+    Permission.SCHEDULE_READ,
+    Permission.SCHEDULE_LIST,
+    Permission.ATTENDANCE_READ,
+    Permission.ATTENDANCE_LIST,
+    Permission.ATTENDANCE_VERIFY,
+    Permission.ANALYTICS_READ,
+    Permission.NOTIFICATION_READ,
+    Permission.BUILDING_READ,
+    Permission.CLASSROOM_READ,
+  ],
+
+  [UserRole.ONLINE_SUPERVISOR]: [
+    // Online Supervisor access
+    Permission.SCHEDULE_READ,
+    Permission.SCHEDULE_LIST,
+    Permission.ATTENDANCE_READ,
+    Permission.ATTENDANCE_LIST,
+    Permission.ATTENDANCE_VERIFY,
+    Permission.ANALYTICS_READ,
+    Permission.NOTIFICATION_READ,
+  ],
   
   [UserRole.LECTURER]: [
     // Lecturer-specific access

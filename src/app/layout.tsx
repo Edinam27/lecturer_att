@@ -105,7 +105,6 @@ export default async function RootLayout({
               {children}
             </div>
             <MobileNavigation />
-            <QuickActionFAB />
           </PWAProvider>
         </SessionWrapper>
       </body>

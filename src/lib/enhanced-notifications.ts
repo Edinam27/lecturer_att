@@ -365,7 +365,7 @@ class EnhancedNotificationService {
     `
   }
 
-  private async getUserPreferences(userId: string): Promise<NotificationPreferences> {
+  public async getUserPreferences(userId: string): Promise<NotificationPreferences> {
     try {
       // Try to get user preferences from database
       const userSettings = await prisma.systemSettings.findMany({
@@ -419,10 +419,11 @@ class EnhancedNotificationService {
       })
       .map(channel => channel.type)
 
-    // Always include in-app notifications
-    if (!enabledChannels.includes('in_app')) {
-      enabledChannels.push('in_app')
-    }
+    // Always include in-app notifications only if not explicitly disabled or if we want to force it for system critical
+    // For now, we respect user preferences for all channels including in_app
+    // if (!enabledChannels.includes('in_app')) {
+    //   enabledChannels.push('in_app')
+    // }
 
     return enabledChannels
   }

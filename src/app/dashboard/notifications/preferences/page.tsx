@@ -285,7 +285,9 @@ const NotificationPreferencesPage: React.FC = () => {
             <div className="space-y-6">
               {Object.entries(preferences.categories).map(([category, channels]) => (
                 <div key={category} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-medium text-gray-900 mb-3 capitalize">{category}</h3>
+                  <h3 className="font-medium text-gray-900 mb-3 capitalize">
+                    {categoryLabels[category] || category}
+                  </h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {channels.map((channel, index) => (

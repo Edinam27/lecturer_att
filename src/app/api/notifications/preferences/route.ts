@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user preferences (this will return defaults if none exist)
-    const preferences = await enhancedNotificationService['getUserPreferences'](session.user.id)
+    const preferences = await enhancedNotificationService.getUserPreferences(session.user.id)
     
     return NextResponse.json({
       success: true,
