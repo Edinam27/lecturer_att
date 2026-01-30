@@ -33,6 +33,14 @@ interface NotificationPreferences {
   }
 }
 
+const categoryLabels: Record<string, string> = {
+  attendance: 'Attendance Updates',
+  verification: 'Verification Requests',
+  system: 'System Alerts',
+  reminder: 'Class Reminders',
+  escalation: 'Escalation Alerts'
+}
+
 const NotificationPreferencesPage: React.FC = () => {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null)
   const [loading, setLoading] = useState(true)
