@@ -210,27 +210,18 @@ export default function MobileNavigation() {
                     </button>
                   )}
                   
-                  <button
-                    onClick={() => {
-                      router.push('/dashboard/notifications');
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <BellIcon className="w-5 h-5" />
-                    <span className="font-medium">Notifications</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      router.push('/dashboard/settings');
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Cog6ToothIcon className="w-5 h-5" />
-                    <span className="font-medium">Settings</span>
-                  </button>
+                  {userRole === 'ADMIN' && (
+                    <button
+                      onClick={() => {
+                        router.push('/dashboard/settings');
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Cog6ToothIcon className="w-5 h-5" />
+                      <span className="font-medium">Settings</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
