@@ -93,7 +93,7 @@ export default function CreateClassroomPage() {
         throw new Error(errorData.error || 'Failed to create classroom')
       }
 
-      router.push('/dashboard')
+      router.push('/dashboard/classrooms')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

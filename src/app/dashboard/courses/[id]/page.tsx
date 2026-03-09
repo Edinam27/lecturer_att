@@ -301,8 +301,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div>
-                          <div className="font-medium">{schedule.classroom.roomCode}</div>
-                          <div className="text-gray-500">{schedule.classroom.building.name}</div>
+                          <div className="font-medium">{schedule.classroom?.roomCode ?? 'N/A'}</div>
+                          <div className="text-gray-500">{schedule.classroom?.building?.name ?? 'No Building'}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

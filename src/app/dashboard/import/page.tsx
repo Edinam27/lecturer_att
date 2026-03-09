@@ -125,8 +125,8 @@ export default function ImportPage() {
   const getTabContent = () => {
     const tabInfo = {
       users: {
-        fields: ['firstName', 'lastName', 'email', 'role', 'studentId/employeeId', 'programme', 'classGroup'],
-        example: 'John,Doe,john.doe@upsa.edu.gh,STUDENT,ST2024001,Computer Science,CS-2024-A'
+        fields: ['firstName', 'lastName', 'email', 'role', 'employeeId', 'department', 'employmentType', 'rank'],
+        example: 'Jane,Smith,jane.smith@upsa.edu.gh,LECTURER,EMP001,Computer Science,FULL_TIME,SENIOR_LECTURER'
       },
       programmes: {
         fields: ['name', 'level', 'durationSemesters', 'description', 'deliveryModes'],
@@ -141,7 +141,7 @@ export default function ImportPage() {
         example: 'CS101,CS-2024-A,lecturer@upsa.edu.gh,MONDAY,08:00,10:00,Room 101'
       },
       classgroups: {
-        fields: ['name', 'programmeId', 'academicYear', 'semester', 'maxStudents'],
+        fields: ['name', 'programmeId', 'academicYear', 'semester', 'studentCount'],
         example: 'CS-2024-A,PROG001,2024/2025,1,50'
       }
     }
@@ -335,6 +335,7 @@ export default function ImportPage() {
                 <li>Email addresses must be unique</li>
                 <li>All required fields must be provided</li>
                 <li>Date formats should be YYYY-MM-DD</li>
+                <li>Academic Year can be "YYYY" (e.g., 2024) or "YYYY/YYYY+1" (e.g., 2024/2025)</li>
                 <li>Time formats should be HH:MM (24-hour)</li>
                 <li>Boolean values should be true/false</li>
                 <li>Multiple values should be comma-separated in quotes</li>

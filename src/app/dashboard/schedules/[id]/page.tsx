@@ -42,15 +42,11 @@ interface Schedule {
 
 interface AttendanceRecord {
   id: string
-  date: string
+  attendanceDate: string
   status: string
-  student: {
-    user: {
-      firstName: string
-      lastName: string
-      email: string
-    }
-    studentId: string
+  lecturer: {
+    id: string
+    name: string
   }
 }
 
@@ -327,7 +323,7 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Student
+                          Lecturer
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Date
@@ -343,13 +339,12 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {record.student.user.firstName} {record.student.user.lastName}
+                                {record.lecturer?.name || 'Unknown'}
                               </div>
-                              <div className="text-sm text-gray-500">{record.student.studentId}</div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {new Date(record.date).toLocaleDateString()}
+                            {new Date(record.attendanceDate).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

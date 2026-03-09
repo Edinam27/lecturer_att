@@ -32,7 +32,7 @@ export async function GET(
     const courses = await prisma.course.findMany({
       where: { programmeId: params.id },
       orderBy: [
-        { semester: 'asc' },
+        { semesterLevel: 'asc' },
         { courseCode: 'asc' }
       ],
       select: {
@@ -40,7 +40,7 @@ export async function GET(
         courseCode: true,
         title: true,
         creditHours: true,
-        semester: true,
+        semesterLevel: true,
         isElective: true
       }
     })

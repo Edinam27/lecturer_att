@@ -205,33 +205,38 @@ async function getAttendanceAnalytics(filter: any, startDate: Date, endDate: Dat
         : value
     ));
 
-    const sessionTypes = await prisma.attendanceRecord.groupBy({
-      by: ['method'],
-      where: filter,
-      _count: { method: true }
-    });
+  const sessionTypes = await prisma.attendanceRecord.groupBy({
+    by: ['method'],
+    where: filter,
+    _count: { method: true }
+  });
 
-    // Location accuracy analysis
-    const locationAccuracy = await prisma.attendanceRecord.groupBy({
-      by: ['locationAccuracy'],
-      where: { ...filter, locationAccuracy: { not: null } },
-      _count: { locationAccuracy: true },
-      _avg: { locationAccuracy: true }
-    });
+  // Calculate session type distribution
+  const sessionTypeData = sessionTypes.map(st => ({
+    type: st.method,
+    count: st._count.method
+  }));
 
-    return NextResponse.json({
-      dailyTrends: serializedDailyTrends,
-      sessionTypes: sessionTypes.map(st => ({
-        type: st.method,
-        count: st._count.method
-      })),
-      locationAccuracy: {
-        distribution: locationAccuracy,
-        averageAccuracy: locationAccuracy.reduce((acc, curr) => 
-          acc + (curr._avg.locationAccuracy || 0), 0) / locationAccuracy.length || 0
-      }
-    });
-  }
+  // Location accuracy analysis
+  /*
+  const locationAccuracy = await prisma.attendanceRecord.groupBy({
+    by: ['locationAccuracy'],
+    where: { ...filter, locationAccuracy: { not: null } },
+    _count: { locationAccuracy: true },
+    _avg: { locationAccuracy: true }
+  });
+  */
+
+  return NextResponse.json({
+    dailyTrends: serializedDailyTrends,
+    sessionTypes: sessionTypeData,
+    locationAccuracy: {
+      distribution: [], // locationAccuracy,
+      averageAccuracy: 0 // locationAccuracy.reduce((acc, curr) => 
+        // acc + (curr._avg.locationAccuracy || 0), 0) / locationAccuracy.length || 0
+    }
+  });
+}
 
 async function getVerificationAnalytics(filter: any, startDate: Date, endDate: Date) {
   // Verification trends over time

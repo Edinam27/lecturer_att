@@ -58,7 +58,7 @@ export default function CreateBuildingPage() {
         throw new Error(errorData.error || 'Failed to create building')
       }
 
-      router.push('/dashboard')
+      router.push('/dashboard/buildings')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

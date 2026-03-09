@@ -198,8 +198,143 @@ async function handleDynamicRequest(request) {
       const staticCache = await caches.open(STATIC_CACHE_NAME);
       return staticCache.match('/offline') || new Response('Offline', { status: 503 });
     }
-    
     throw error;
+  }
+}
+
+// Listen for sync events
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'attendance-sync') {
+    event.waitUntil(syncPendingAttendance());
+  } else if (event.tag === 'verification-sync') {
+    event.waitUntil(syncPendingVerifications());
+  }
+});
+
+// Listen for messages from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SYNC_NOW') {
+    console.log('Service Worker: Manual sync triggered');
+    event.waitUntil(Promise.all([
+      syncPendingAttendance(),
+      syncPendingVerifications()
+    ]));
+  }
+});
+
+// Helper to access IndexedDB
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('upsa-attendance-db', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function syncPendingAttendance() {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(['pendingAttendance'], 'readwrite');
+    const store = transaction.objectStore('pendingAttendance');
+    const request = store.getAll();
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = async () => {
+        const pendingItems = request.result;
+        if (!pendingItems || pendingItems.length === 0) {
+          resolve();
+          return;
+        }
+
+        console.log(`Service Worker: Syncing ${pendingItems.length} attendance records`);
+
+        // Process sequentially to ensure order
+        for (const item of pendingItems) {
+          try {
+            // Determine endpoint based on item structure
+            let endpoint = '/api/attendance/sync'; 
+            
+            // Check if it's a lecturer "taking" attendance (start session)
+            if (item.scheduleId && item.method) {
+               endpoint = '/api/attendance/take';
+            } else if (item.sessionId && item.attendanceRecords) {
+               // Use sync endpoint for student records
+               endpoint = '/api/attendance/sync'; 
+            }
+
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(item)
+            });
+
+            if (response.ok || response.status === 409) { // 409 conflict might mean already exists
+              // Remove from IDB on success using a NEW transaction (async/await breaks transaction scope)
+              const deleteTx = db.transaction(['pendingAttendance'], 'readwrite');
+              deleteTx.objectStore('pendingAttendance').delete(item.id);
+              console.log('Service Worker: Synced item', item.id);
+            } else {
+              console.error('Service Worker: Sync failed for item', item.id, response.status);
+            }
+          } catch (error) {
+            console.error('Service Worker: Sync failed for item', item.id, error);
+          }
+        }
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Service Worker: DB error during attendance sync', error);
+  }
+}
+
+async function syncPendingVerifications() {
+  try {
+    const db = await openDB();
+    if (!db.objectStoreNames.contains('pendingVerifications')) return;
+
+    const transaction = db.transaction(['pendingVerifications'], 'readwrite');
+    const store = transaction.objectStore('pendingVerifications');
+    const request = store.getAll();
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = async () => {
+        const pendingItems = request.result;
+        if (!pendingItems || pendingItems.length === 0) {
+          resolve();
+          return;
+        }
+
+        console.log(`Service Worker: Syncing ${pendingItems.length} verification records`);
+
+        for (const item of pendingItems) {
+          try {
+            const response = await fetch('/api/attendance/verify-sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(item)
+            });
+
+            if (response.ok || response.status === 409) {
+              const deleteTx = db.transaction(['pendingVerifications'], 'readwrite');
+              deleteTx.objectStore('pendingVerifications').delete(item.id);
+              console.log('Service Worker: Synced verification', item.id);
+            }
+          } catch (error) {
+            console.error('Service Worker: Sync failed for verification', item.id, error);
+          }
+        }
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Service Worker: DB error during verification sync', error);
   }
 }
 

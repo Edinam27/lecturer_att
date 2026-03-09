@@ -118,7 +118,7 @@ async function importUsers(data: any[]): Promise<ImportResult> {
           firstName: row.firstName,
           lastName: row.lastName,
           email: row.email,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           role: row.role.toUpperCase(),
           isActive: true
         }
@@ -240,7 +240,7 @@ async function importCourses(data: any[]): Promise<ImportResult> {
           courseCode: row.code,
           title: row.name,
           creditHours: parseInt(row.credits),
-          semester: parseInt(row.semester) || 1,
+          semesterLevel: parseInt(row.semester) || 1,
           isElective: row.isElective === 'true' || row.isElective === true,
           description: row.description || '',
           programmeId: programme.id
@@ -307,16 +307,40 @@ async function importSchedules(data: any[]): Promise<ImportResult> {
         continue
       }
 
+      // Find classroom
+      let classroomId = null
+      if (row.venue) {
+        const classroom = await prisma.classroom.findUnique({
+          where: { roomCode: row.venue }
+        })
+        if (classroom) {
+          classroomId = classroom.id
+        } else {
+          warnings.push(`Row ${rowNum}: Venue ${row.venue} not found`)
+        }
+      }
+
+      const dayMap: { [key: string]: number } = {
+        'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3,
+        'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6
+      }
+      
+      const dayOfWeek = dayMap[row.dayOfWeek.toUpperCase()]
+      if (dayOfWeek === undefined) {
+         errors.push(`Row ${rowNum}: Invalid day of week ${row.dayOfWeek}`)
+         continue
+      }
+
       await prisma.courseSchedule.create({
         data: {
           courseId: course.id,
           classGroupId: classGroup.id,
           lecturerId: lecturer.id,
-          dayOfWeek: row.dayOfWeek.toUpperCase(),
+          dayOfWeek: dayOfWeek,
           startTime: row.startTime,
           endTime: row.endTime,
           sessionType: 'LECTURE',
-          isActive: true
+          classroomId: classroomId
         }
       })
 
@@ -369,13 +393,33 @@ async function importClassGroups(data: any[]): Promise<ImportResult> {
         continue
       }
 
+      // Format academic year
+      let academicYear = String(row.academicYear).trim()
+      let admissionYear = 0
+
+      if (/^\d{4}$/.test(academicYear)) {
+        const year = parseInt(academicYear)
+        academicYear = `${year}/${year + 1}`
+        admissionYear = year
+      } else if (/^\d{4}\/\d{4}$/.test(academicYear)) {
+        const [start, end] = academicYear.split('/').map(y => parseInt(y))
+        if (end !== start + 1) {
+          warnings.push(`Row ${rowNum}: Academic year ${academicYear} has non-consecutive years. Standard format is YYYY/YYYY+1`)
+        }
+        admissionYear = start
+      } else {
+        errors.push(`Row ${rowNum}: Invalid academic year format "${row.academicYear}". Expected "YYYY" or "YYYY/YYYY+1"`)
+        continue
+      }
+
       await prisma.classGroup.create({
         data: {
           name: row.name,
           programmeId: programme.id,
-          admissionYear: parseInt(row.academicYear.split('/')[0]),
-          currentSemester: parseInt(row.semester) || 1,
-          maxStudents: parseInt(row.maxStudents) || 50
+          admissionYear: admissionYear,
+          academicYear: academicYear,
+          semester: row.semester ? String(row.semester) : '1',
+          studentCount: parseInt(row.studentCount) || 50
         }
       })
 

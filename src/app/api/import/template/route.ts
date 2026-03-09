@@ -70,10 +70,7 @@ function generateUsersTemplate(): string {
     'employeeId',
     'department',
     'employmentType',
-    'rank',
-    'studentId',
-    'programme',
-    'classGroup'
+    'rank'
   ]
   
   const exampleRows = [
@@ -85,10 +82,7 @@ function generateUsersTemplate(): string {
       '',
       '',
       '',
-      '',
-      'ST2024001',
-      'Computer Science',
-      'CS-2024-A'
+      ''
     ],
     [
       'Jane',
@@ -98,10 +92,7 @@ function generateUsersTemplate(): string {
       'EMP001',
       'Computer Science',
       'FULL_TIME',
-      'SENIOR_LECTURER',
-      '',
-      '',
-      ''
+      'SENIOR_LECTURER'
     ],
     [
       'Admin',
@@ -111,10 +102,7 @@ function generateUsersTemplate(): string {
       'ADM001',
       'Administration',
       'FULL_TIME',
-      'ADMINISTRATOR',
-      '',
-      '',
-      ''
+      'ADMINISTRATOR'
     ]
   ]
   
@@ -251,7 +239,7 @@ function generateClassGroupsTemplate(): string {
     'programmeId',
     'academicYear',
     'semester',
-    'maxStudents'
+    'studentCount'
   ]
   
   const exampleRows = [

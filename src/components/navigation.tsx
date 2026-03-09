@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserRole } from '@prisma/client'
 import { useState } from 'react'
+import { Menu } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 interface NavigationItem {
   name: string
@@ -120,6 +122,10 @@ export function Navigation() {
     item.roles.includes(userRole)
   )
 
+  const MAX_VISIBLE_ITEMS = 5
+  const visibleItems = filteredItems.slice(0, MAX_VISIBLE_ITEMS)
+  const overflowItems = filteredItems.slice(MAX_VISIBLE_ITEMS)
+
   return (
     <nav className="bg-white shadow-sm border-b" suppressHydrationWarning>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" suppressHydrationWarning>
@@ -132,7 +138,7 @@ export function Navigation() {
             </div>
             {/* Desktop Navigation */}
             <div className="hidden md:ml-6 md:flex md:space-x-4 lg:space-x-6 xl:space-x-8">
-              {filteredItems.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Link
@@ -148,6 +154,33 @@ export function Navigation() {
                   </Link>
                 )
               })}
+              {overflowItems.length > 0 && (
+                <Popover>
+                  <PopoverTrigger className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-muted hover:border-gray-300 hover:text-enhanced">
+                    <Menu className="h-5 w-5" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2">
+                    <div className="flex flex-col space-y-1">
+                      {overflowItems.map((item) => {
+                        const isActive = pathname === item.href
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className={`block px-4 py-2 text-sm rounded-md transition-colors ${
+                              isActive
+                                ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                            }`}
+                          >
+                            {item.name}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
           </div>
           

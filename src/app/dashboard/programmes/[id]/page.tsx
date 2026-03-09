@@ -23,7 +23,7 @@ interface Course {
   courseCode: string
   title: string
   creditHours: number
-  semester: number
+  semesterLevel: number
   isElective: boolean
 }
 
@@ -158,7 +158,7 @@ export default function ProgrammeDetailPage({ params }: { params: Promise<{ id: 
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Total Courses</dt>
-                <dd className="mt-1 text-sm text-gray-900">{programme._count.courses}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{courses.length}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Class Groups</dt>
@@ -235,7 +235,7 @@ export default function ProgrammeDetailPage({ params }: { params: Promise<{ id: 
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          Semester {course.semester}
+                          Semester {course.semesterLevel}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {course.creditHours}
