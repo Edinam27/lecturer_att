@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function POST(request: NextRequest) {
   try {
@@ -221,6 +222,7 @@ export async function GET(request: NextRequest) {
         startTime: true,
         endTime: true,
         sessionType: true,
+        meetingLink: true,
         course: {
           select: {
             id: true,
@@ -257,6 +259,7 @@ export async function GET(request: NextRequest) {
         classroom: {
           select: {
             name: true,
+            virtualLink: true,
             building: {
               select: {
                 name: true
@@ -282,6 +285,11 @@ export async function GET(request: NextRequest) {
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      meetingLink: schedule.meetingLink,
+      resolvedMeetingLink: resolveMeetingLink(
+        schedule.meetingLink,
+        schedule.classroom?.virtualLink
+      ),
       venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
       isActive: true, // Default to active, can be updated based on business logic
       course: {

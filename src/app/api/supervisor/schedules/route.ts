@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,6 +72,11 @@ export async function GET(request: NextRequest) {
         
         const log = schedule.supervisorLogs[0]; // Assuming one log per session usually
 
+        const meetingLink = resolveMeetingLink(
+            schedule.meetingLink,
+            schedule.classroom?.virtualLink
+        )
+
         return {
             id: schedule.id,
             sessionDate: today.toISOString().split('T')[0],
@@ -100,6 +106,7 @@ export async function GET(request: NextRequest) {
                 roomCode: schedule.classroom?.roomCode || 'N/A',
                 virtualLink: schedule.classroom?.virtualLink || null
             },
+            meetingLink,
             attendanceTaken: schedule.attendanceRecords.length > 0,
             verified: schedule.supervisorLogs.length > 0,
             verificationStatus: log ? log.status : 'pending',

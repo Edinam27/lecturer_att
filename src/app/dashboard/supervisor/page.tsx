@@ -34,6 +34,7 @@ interface Schedule {
     roomCode: string
     virtualLink: string | null
   }
+  meetingLink?: string | null
   attendanceTaken: boolean
   verified: boolean
   verificationStatus: string
@@ -209,9 +210,9 @@ export default function SupervisorDashboard() {
                           </svg>
                           {schedule.classroom.roomCode} ({schedule.building.name})
                         </p>
-                        {schedule.classroom.virtualLink && (
+                        {schedule.meetingLink && (
                              <p className="mt-2 flex items-center text-sm text-blue-500 sm:mt-0 sm:ml-6">
-                                <a href={schedule.classroom.virtualLink} target="_blank" rel="noopener noreferrer" className="flex items-center hover:underline">
+                                <a href={schedule.meetingLink} target="_blank" rel="noopener noreferrer" className="flex items-center hover:underline">
                                     <svg className="flex-shrink-0 mr-1.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>

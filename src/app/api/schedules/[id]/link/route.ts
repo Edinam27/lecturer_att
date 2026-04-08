@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { normalizeMeetingLink, resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function PUT(
   request: NextRequest,
@@ -21,7 +22,10 @@ export async function PUT(
     // Verify ownership
     const schedule = await prisma.courseSchedule.findUnique({
       where: { id: scheduleId },
-      include: { lecturer: true }
+      include: {
+        lecturer: true,
+        classroom: true
+      }
     })
 
     if (!schedule) {
@@ -32,12 +36,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    const normalizedLink = normalizeMeetingLink(link)
+
     const updated = await prisma.courseSchedule.update({
       where: { id: scheduleId },
-      data: { meetingLink: link }
+      data: { meetingLink: normalizedLink }
     })
 
-    return NextResponse.json(updated)
+    return NextResponse.json({
+      ...updated,
+      resolvedMeetingLink: resolveMeetingLink(
+        updated.meetingLink,
+        schedule.classroom?.virtualLink
+      )
+    })
   } catch (error) {
     console.error('Error updating meeting link:', error)
     return NextResponse.json(

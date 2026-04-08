@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         startTime: true,
         endTime: true,
         sessionType: true,
+        meetingLink: true,
         course: {
           select: {
             id: true,
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           select: {
             id: true,
             name: true,
+            virtualLink: true,
             building: {
               select: {
                 name: true
@@ -95,6 +98,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      meetingLink: schedule.meetingLink,
+      resolvedMeetingLink: resolveMeetingLink(
+        schedule.meetingLink,
+        schedule.classroom?.virtualLink
+      ),
       venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
       isActive: true, // Default to active
       course: {
@@ -121,6 +129,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       classroom: schedule.classroom ? {
         id: schedule.classroom.id,
         name: schedule.classroom.name,
+        virtualLink: schedule.classroom.virtualLink,
         building: {
           name: schedule.classroom.building.name
         }

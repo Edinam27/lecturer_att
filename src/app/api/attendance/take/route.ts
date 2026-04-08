@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
 import { verifyLocationForAttendance } from '@/lib/geolocation'
 import { verifyVirtualClassroom, generateDeviceFingerprint, getClientIpAddress } from '@/lib/virtual-verification'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 import { z } from 'zod'
 
 const takeAttendanceSchema = z.object({
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Schedule not found or unauthorized' }, { status: 404 })
     }
 
+    const resolvedMeetingLink = resolveMeetingLink(
+      schedule.meetingLink,
+      schedule.classroom?.virtualLink
+    )
+
     // Get client information for virtual sessions
     const userAgent = request.headers.get('user-agent') || 'unknown'
     const ipAddress = getClientIpAddress(request.headers)
@@ -101,7 +107,7 @@ export async function POST(request: NextRequest) {
         
         // Verify virtual classroom requirements
         const virtualVerification = await verifyVirtualClassroom({
-          meetingLink: schedule.classroom?.virtualLink || '',
+          meetingLink: resolvedMeetingLink || '',
           scheduledStartTime: schedule.startTime,
           scheduledEndTime: schedule.endTime,
           userAgent,
@@ -221,12 +227,12 @@ export async function POST(request: NextRequest) {
       locationVerified = locationVerification.verified
     } else if (method === 'virtual') {
       console.log('Verifying virtual session for schedule:', schedule.id)
-      console.log('Meeting Link:', schedule.meetingLink || schedule.classroom?.virtualLink)
+      console.log('Meeting Link:', resolvedMeetingLink)
       console.log('Time:', schedule.startTime, '-', schedule.endTime)
 
       // Verify virtual classroom requirements
       const virtualVerification = await verifyVirtualClassroom({
-        meetingLink: schedule.meetingLink || schedule.classroom?.virtualLink || '',
+        meetingLink: resolvedMeetingLink || '',
         scheduledStartTime: schedule.startTime,
         scheduledEndTime: schedule.endTime,
         userAgent,

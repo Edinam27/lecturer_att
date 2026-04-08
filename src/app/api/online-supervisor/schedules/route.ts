@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,7 +77,10 @@ export async function GET(request: NextRequest) {
                 name: `${schedule.lecturer.user.firstName} ${schedule.lecturer.user.lastName}`,
                 email: schedule.lecturer.user.email
             },
-            meetingLink: schedule.classroom?.virtualLink || 'https://zoom.us/j/example', // Fallback for demo
+            meetingLink: resolveMeetingLink(
+              schedule.meetingLink,
+              schedule.classroom?.virtualLink
+            ),
             verified: schedule.supervisorLogs.length > 0,
             verificationStatus: log ? log.status : 'pending',
             verificationComment: log ? log.comments : null,

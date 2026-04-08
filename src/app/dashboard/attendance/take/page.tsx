@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { getUPSACoordinates, getUPSARadius, getDistance } from '@/lib/geolocation'
 import { useAttendanceLocation } from '@/hooks/useAttendanceLocation'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 interface Schedule {
   id: string
@@ -13,6 +14,7 @@ interface Schedule {
   endTime: string
   sessionType: string
   meetingLink?: string | null
+  resolvedMeetingLink?: string | null
   course: {
     id: string
     name: string
@@ -159,7 +161,10 @@ export default function TakeAttendancePage() {
   // Update attendance method when schedule is selected
   useEffect(() => {
     if (selectedSchedule) {
-      const link = selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink
+      const link = selectedSchedule.resolvedMeetingLink ?? resolveMeetingLink(
+        selectedSchedule.meetingLink,
+        selectedSchedule.classroom.virtualLink
+      )
       const isVirtual = link && link.trim() !== ''
       setAttendanceMethod(isVirtual ? 'virtual' : 'onsite')
     }
@@ -219,7 +224,11 @@ export default function TakeAttendancePage() {
       })
       
       if (response.ok) {
-        const updatedSchedule = { ...selectedSchedule, meetingLink: newLink }
+        const updatedSchedule = {
+          ...selectedSchedule,
+          meetingLink: newLink,
+          resolvedMeetingLink: newLink
+        }
         setSelectedSchedule(updatedSchedule)
         setSchedules(schedules.map(s => s.id === updatedSchedule.id ? updatedSchedule : s))
         setIsEditingLink(false)
@@ -427,7 +436,7 @@ export default function TakeAttendancePage() {
                           {schedule.classGroup.name} • {schedule.sessionType}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {(schedule.meetingLink || schedule.classroom.virtualLink) ? (
+                          {resolveMeetingLink(schedule.meetingLink, schedule.classroom.virtualLink) ? (
                             <span className="inline-flex items-center">
                               <svg className="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -470,7 +479,7 @@ export default function TakeAttendancePage() {
                         <h4 className="text-sm font-medium text-blue-900">Meeting Link</h4>
                         <button 
                           onClick={() => {
-                            setNewLink(selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink || '')
+                            setNewLink(resolveMeetingLink(selectedSchedule.meetingLink, selectedSchedule.classroom.virtualLink) || '')
                             setIsEditingLink(!isEditingLink)
                           }}
                           className="text-xs text-blue-600 hover:text-blue-800 underline"
@@ -496,18 +505,18 @@ export default function TakeAttendancePage() {
                           </button>
                         </div>
                       ) : (
-                        (selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink) ? (
+                        resolveMeetingLink(selectedSchedule.meetingLink, selectedSchedule.classroom.virtualLink) ? (
                           <div className="flex items-center justify-between">
                             <a
-                              href={selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink || '#'}
+                              href={resolveMeetingLink(selectedSchedule.meetingLink, selectedSchedule.classroom.virtualLink) || '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-800 underline text-sm break-all"
                             >
-                              {selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink}
+                              {resolveMeetingLink(selectedSchedule.meetingLink, selectedSchedule.classroom.virtualLink)}
                             </a>
                             <button
-                              onClick={() => navigator.clipboard.writeText((selectedSchedule.meetingLink || selectedSchedule.classroom.virtualLink)!)}
+                              onClick={() => navigator.clipboard.writeText(resolveMeetingLink(selectedSchedule.meetingLink, selectedSchedule.classroom.virtualLink)!)}
                               className="ml-2 p-1 text-blue-600 hover:text-blue-800"
                               title="Copy link"
                             >

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth-config'
+import { resolveMeetingLink } from '@/lib/meeting-link'
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,13 +60,20 @@ export async function GET(request: NextRequest) {
     })
 
     // Include all schedules, but mark those with attendance
-    const formattedSchedules = schedules.map(schedule => ({
+    const formattedSchedules = schedules.map(schedule => {
+      const resolvedMeetingLink = resolveMeetingLink(
+        schedule.meetingLink,
+        schedule.classroom?.virtualLink
+      )
+
+      return {
       id: schedule.id,
       sessionDate: today.toISOString().split('T')[0], // Add today's date for frontend
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
       meetingLink: schedule.meetingLink,
+      resolvedMeetingLink,
       hasAttendance: schedule.attendanceRecords.length > 0,
       course: {
         id: schedule.course.id,
@@ -83,7 +91,8 @@ export async function GET(request: NextRequest) {
         name: schedule.classroom?.name || 'N/A',
         virtualLink: schedule.classroom?.virtualLink || null
       }
-    }))
+    }
+    })
 
     return NextResponse.json(formattedSchedules)
   } catch (error) {

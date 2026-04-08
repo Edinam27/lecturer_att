@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
 import { z } from 'zod';
 import { isLocationValid } from '@/lib/geolocation';
+import { resolveMeetingLink } from '@/lib/meeting-link';
 
 // Schema for validation
 const recordAttendanceSchema = z.object({
@@ -96,7 +97,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if it is a virtual session
-    const isVirtual = schedule.sessionType === 'VIRTUAL' || schedule.sessionType === 'ONLINE' || (schedule.classroom && !!schedule.classroom.virtualLink);
+    const resolvedMeetingLink = resolveMeetingLink(
+      schedule.meetingLink,
+      schedule.classroom?.virtualLink
+    );
+    const isVirtual = schedule.sessionType === 'VIRTUAL' || schedule.sessionType === 'ONLINE' || !!resolvedMeetingLink;
 
     // Create Attendance Record
     const newRecord = await prisma.attendanceRecord.create({

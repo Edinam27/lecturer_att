@@ -20,7 +20,7 @@ interface OnlineSchedule {
     name: string
     email: string
   }
-  meetingLink: string
+  meetingLink: string | null
   verified: boolean
   verificationStatus: string
   platform?: string
@@ -78,7 +78,7 @@ export default function OnlineSupervisorDashboard() {
     setTechnicalIssues('')
     
     // Auto-detect platform
-    const link = schedule.meetingLink.toLowerCase()
+    const link = (schedule.meetingLink || '').toLowerCase()
     if (link.includes('zoom')) setPlatform('Zoom')
     else if (link.includes('meet.google')) setPlatform('Google Meet')
     else if (link.includes('teams')) setPlatform('Microsoft Teams')
@@ -211,14 +211,20 @@ export default function OnlineSupervisorDashboard() {
                                 )}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                <a 
-                                    href={schedule.meetingLink} 
-                                    target="_blank" 
-                                    rel="noreferrer"
-                                    className="text-indigo-600 hover:text-indigo-900 border border-indigo-600 px-3 py-1 rounded hover:bg-indigo-50"
-                                >
-                                    Join
-                                </a>
+                                {schedule.meetingLink ? (
+                                  <a 
+                                      href={schedule.meetingLink} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      className="text-indigo-600 hover:text-indigo-900 border border-indigo-600 px-3 py-1 rounded hover:bg-indigo-50"
+                                  >
+                                      Join
+                                  </a>
+                                ) : (
+                                  <span className="text-gray-400 border border-gray-300 px-3 py-1 rounded">
+                                    No Link
+                                  </span>
+                                )}
                                 {!schedule.verified && (
                                   <button
                                     onClick={() => openMonitoring(schedule)}
