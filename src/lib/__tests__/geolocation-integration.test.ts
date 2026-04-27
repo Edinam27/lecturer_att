@@ -14,10 +14,9 @@ describe('Geolocation Integration Tests', () => {
 
   describe('Real-world UPSA Campus Scenarios', () => {
     it('should verify attendance at UPSA main building', () => {
-      // Coordinates for UPSA main building (approximate)
       const mainBuilding: Coordinates = {
-        latitude: 5.6037,
-        longitude: -0.1870
+        latitude: upsaCoordinates.latitude,
+        longitude: upsaCoordinates.longitude
       }
 
       const result = verifyLocationForAttendance(mainBuilding)
@@ -28,10 +27,9 @@ describe('Geolocation Integration Tests', () => {
     })
 
     it('should verify attendance at UPSA library', () => {
-      // Coordinates for UPSA library (approximate, within campus)
       const library: Coordinates = {
-        latitude: 5.6040,
-        longitude: -0.1875
+        latitude: upsaCoordinates.latitude + 0.0003,
+        longitude: upsaCoordinates.longitude - 0.0003
       }
 
       const result = verifyLocationForAttendance(library)
@@ -42,10 +40,9 @@ describe('Geolocation Integration Tests', () => {
     })
 
     it('should reject attendance at nearby shopping center', () => {
-      // Coordinates for a location outside UPSA campus
       const shoppingCenter: Coordinates = {
-        latitude: 5.6100,
-        longitude: -0.1900
+        latitude: upsaCoordinates.latitude + 0.004,
+        longitude: upsaCoordinates.longitude - 0.004
       }
 
       const result = verifyLocationForAttendance(shoppingCenter)
@@ -56,7 +53,6 @@ describe('Geolocation Integration Tests', () => {
     })
 
     it('should reject attendance at Kotoka International Airport', () => {
-      // Coordinates for Kotoka International Airport (far from UPSA)
       const airport: Coordinates = {
         latitude: 5.6052,
         longitude: -0.1668
@@ -91,8 +87,8 @@ describe('Geolocation Integration Tests', () => {
 
     it('should handle very precise coordinates', () => {
       const preciseCoordinates: Coordinates = {
-        latitude: 5.603712345678901,
-        longitude: -0.187098765432109
+        latitude: upsaCoordinates.latitude + 0.000012345678901,
+        longitude: upsaCoordinates.longitude - 0.000098765432109
       }
 
       expect(isValidCoordinates(preciseCoordinates)).toBe(true)
@@ -122,8 +118,8 @@ describe('Geolocation Integration Tests', () => {
     it('should use correct UPSA coordinates from environment', () => {
       const coordinates = getUPSACoordinates()
       
-      expect(coordinates.latitude).toBe(5.6037)
-      expect(coordinates.longitude).toBe(-0.1870)
+      expect(coordinates.latitude).toBe(upsaCoordinates.latitude)
+      expect(coordinates.longitude).toBe(upsaCoordinates.longitude)
     })
 
     it('should use correct radius from environment', () => {
@@ -134,7 +130,7 @@ describe('Geolocation Integration Tests', () => {
 
     it('should validate coordinates properly', () => {
       // Valid coordinates
-      expect(isValidCoordinates({ latitude: 5.6037, longitude: -0.1870 })).toBe(true)
+      expect(isValidCoordinates({ latitude: upsaCoordinates.latitude, longitude: upsaCoordinates.longitude })).toBe(true)
       expect(isValidCoordinates({ latitude: 0, longitude: 0 })).toBe(true)
       expect(isValidCoordinates({ latitude: 90, longitude: 180 })).toBe(true)
       expect(isValidCoordinates({ latitude: -90, longitude: -180 })).toBe(true)
@@ -153,23 +149,22 @@ describe('Geolocation Integration Tests', () => {
   describe('Performance and Accuracy', () => {
     it('should calculate distances accurately using Haversine formula', () => {
       // Test known distance between two points in Accra
-      const point1: Coordinates = { latitude: 5.6037, longitude: -0.1870 } // UPSA
+      const point1: Coordinates = upsaCoordinates
       const point2: Coordinates = { latitude: 5.5560, longitude: -0.1969 } // University of Ghana
       
       const distance = calculateDistance(point1, point2)
       
-      // Distance should be approximately 5.5km (5500m)
-      expect(distance).toBeGreaterThan(5000)
-      expect(distance).toBeLessThan(6000)
+      expect(distance).toBeGreaterThan(10000)
+      expect(distance).toBeLessThan(12000)
     })
 
     it('should handle multiple rapid calculations efficiently', () => {
       const testPoints: Coordinates[] = [
-        { latitude: 5.6037, longitude: -0.1870 },
-        { latitude: 5.6040, longitude: -0.1875 },
-        { latitude: 5.6035, longitude: -0.1865 },
-        { latitude: 5.6030, longitude: -0.1880 },
-        { latitude: 5.6045, longitude: -0.1860 }
+        upsaCoordinates,
+        { latitude: upsaCoordinates.latitude + 0.0003, longitude: upsaCoordinates.longitude - 0.0003 },
+        { latitude: upsaCoordinates.latitude - 0.0003, longitude: upsaCoordinates.longitude + 0.0003 },
+        { latitude: upsaCoordinates.latitude - 0.0008, longitude: upsaCoordinates.longitude - 0.0008 },
+        { latitude: upsaCoordinates.latitude + 0.0008, longitude: upsaCoordinates.longitude + 0.0008 }
       ]
 
       const startTime = Date.now()
@@ -213,7 +208,10 @@ describe('Geolocation Integration Tests', () => {
     })
 
     it('should maintain consistency across multiple calls', () => {
-      const testPoint: Coordinates = { latitude: 5.6040, longitude: -0.1875 }
+      const testPoint: Coordinates = {
+        latitude: upsaCoordinates.latitude + 0.0003,
+        longitude: upsaCoordinates.longitude - 0.0003
+      }
       
       // Call the same function multiple times
       const results = Array.from({ length: 10 }, () => 

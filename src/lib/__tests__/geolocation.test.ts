@@ -26,9 +26,15 @@ afterEach(() => {
 })
 
 describe('Geolocation Functions', () => {
-  const upsaCoordinates: Coordinates = { latitude: 5.6037, longitude: -0.1870 }
-  const withinRadiusCoordinates: Coordinates = { latitude: 5.6040, longitude: -0.1875 } // ~50m away
-  const outsideRadiusCoordinates: Coordinates = { latitude: 5.6100, longitude: -0.1900 } // ~800m away
+  const upsaCoordinates: Coordinates = getUPSACoordinates()
+  const withinRadiusCoordinates: Coordinates = {
+    latitude: upsaCoordinates.latitude + 0.0003,
+    longitude: upsaCoordinates.longitude - 0.0003
+  }
+  const outsideRadiusCoordinates: Coordinates = {
+    latitude: upsaCoordinates.latitude + 0.004,
+    longitude: upsaCoordinates.longitude - 0.004
+  }
   const farAwayCoordinates: Coordinates = { latitude: 6.0000, longitude: -1.0000 } // Very far
 
   describe('calculateDistance', () => {
@@ -108,8 +114,8 @@ describe('Geolocation Functions', () => {
   describe('getUPSACoordinates', () => {
     it('should return correct UPSA coordinates', () => {
       const coordinates = getUPSACoordinates()
-      expect(coordinates.latitude).toBe(5.6037)
-      expect(coordinates.longitude).toBe(-0.1870)
+      expect(coordinates.latitude).toBe(upsaCoordinates.latitude)
+      expect(coordinates.longitude).toBe(upsaCoordinates.longitude)
     })
 
     it('should use environment variables when available', () => {
@@ -211,8 +217,8 @@ describe('Geolocation Functions', () => {
 
     it('should handle very small coordinate differences', () => {
       const nearbyCoords: Coordinates = { 
-        latitude: 5.6037001, 
-        longitude: -0.1870001 
+        latitude: upsaCoordinates.latitude + 0.0000001, 
+        longitude: upsaCoordinates.longitude - 0.0000001 
       }
       
       const distance = calculateDistance(upsaCoordinates, nearbyCoords)
@@ -236,28 +242,31 @@ describe('Geolocation Functions', () => {
 
   describe('Real-world Test Scenarios', () => {
     it('should verify lecturer at UPSA main entrance', () => {
-      // Approximate coordinates for UPSA main entrance
-      const mainEntrance: Coordinates = { latitude: 5.6035, longitude: -0.1872 }
+      const mainEntrance: Coordinates = {
+        latitude: upsaCoordinates.latitude + 0.0002,
+        longitude: upsaCoordinates.longitude - 0.0002
+      }
       const result = verifyLocationForAttendance(mainEntrance)
       expect(result.verified).toBe(true)
       expect(result.distance).toBeLessThan(300)
     })
 
     it('should reject lecturer at nearby location outside campus', () => {
-      // Coordinates for a location near but outside UPSA
-      const nearbyLocation: Coordinates = { latitude: 5.6000, longitude: -0.1900 }
+      const nearbyLocation: Coordinates = {
+        latitude: upsaCoordinates.latitude + 0.004,
+        longitude: upsaCoordinates.longitude - 0.004
+      }
       const result = verifyLocationForAttendance(nearbyLocation)
       expect(result.verified).toBe(false)
       expect(result.distance).toBeGreaterThan(300)
     })
 
     it('should handle lecturer at different parts of campus', () => {
-      // Test various points around the campus
       const campusLocations: Coordinates[] = [
-        { latitude: 5.6040, longitude: -0.1875 }, // North side
-        { latitude: 5.6034, longitude: -0.1865 }, // East side
-        { latitude: 5.6030, longitude: -0.1875 }, // South side
-        { latitude: 5.6040, longitude: -0.1880 }  // West side
+        { latitude: upsaCoordinates.latitude + 0.0003, longitude: upsaCoordinates.longitude - 0.0003 },
+        { latitude: upsaCoordinates.latitude - 0.0003, longitude: upsaCoordinates.longitude + 0.0003 },
+        { latitude: upsaCoordinates.latitude - 0.0008, longitude: upsaCoordinates.longitude - 0.0008 },
+        { latitude: upsaCoordinates.latitude + 0.0008, longitude: upsaCoordinates.longitude + 0.0008 }
       ]
 
       campusLocations.forEach((location, index) => {

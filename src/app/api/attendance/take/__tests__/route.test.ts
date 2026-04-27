@@ -1,279 +1,257 @@
 import { NextRequest } from 'next/server'
-import { POST } from '../route'
-import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/db'
+import { getServerSession } from 'next-auth/next'
 import { verifyLocationForAttendance } from '@/lib/geolocation'
 
-// Mock dependencies
-jest.mock('next-auth')
-jest.mock('@/lib/db')
+jest.mock('next-auth/next')
 jest.mock('@/lib/geolocation')
+jest.mock('@/lib/auth-config', () => ({
+  authOptions: {}
+}))
+jest.mock('@/lib/virtual-verification', () => ({
+  verifyVirtualClassroom: jest.fn(),
+  generateDeviceFingerprint: jest.fn(() => 'device-fingerprint'),
+  getClientIpAddress: jest.fn(() => '127.0.0.1')
+}))
+
+const findFirstLecturer = jest.fn()
+const findFirstSchedule = jest.fn()
+const findFirstRecord = jest.fn()
+const createRecord = jest.fn()
+const createAuditLog = jest.fn()
+
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    lecturer: {
+      findFirst: (...args: any[]) => findFirstLecturer(...args),
+    },
+    courseSchedule: {
+      findFirst: (...args: any[]) => findFirstSchedule(...args),
+    },
+    attendanceRecord: {
+      findFirst: (...args: any[]) => findFirstRecord(...args),
+      create: (...args: any[]) => createRecord(...args),
+      update: jest.fn(),
+    },
+    auditLog: {
+      create: (...args: any[]) => createAuditLog(...args),
+    },
+  }
+}))
+
+import { POST } from '../route'
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockVerifyLocationForAttendance = verifyLocationForAttendance as jest.MockedFunction<typeof verifyLocationForAttendance>
+
+const onsiteRequestBody = {
+  scheduleId: 'schedule-123',
+  latitude: 5.6037,
+  longitude: -0.187,
+  method: 'onsite' as const,
+  remarks: 'On campus'
+}
+
+const lecturer = {
+  id: 'lecturer-123',
+  userId: 'user-123',
+}
+
+const schedule = {
+  id: 'schedule-123',
+  lecturerId: 'lecturer-123',
+  startTime: '09:00',
+  endTime: '12:00',
+  meetingLink: null,
+  course: {
+    title: 'Advanced Financial Accounting',
+    name: 'Advanced Financial Accounting',
+  },
+  classGroup: {
+    name: 'MBA-AF-2024-FT',
+  },
+  classroom: {
+    virtualLink: null,
+    building: {
+      name: 'Main Academic Building',
+    }
+  }
+}
 
 describe('/api/attendance/take', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('should successfully record attendance with valid location', async () => {
-    // Mock session
+  it('records onsite attendance successfully', async () => {
     mockGetServerSession.mockResolvedValue({
       user: {
         id: 'user-123',
-        email: 'lecturer@upsa.edu.gh',
         role: 'LECTURER',
-        lecturerId: 'lecturer-123'
       }
     } as any)
-
-    // Mock location verification - within UPSA radius
+    findFirstLecturer.mockResolvedValue(lecturer)
+    findFirstSchedule.mockResolvedValue(schedule)
+    findFirstRecord.mockResolvedValue(null)
     mockVerifyLocationForAttendance.mockReturnValue({
       verified: true,
       distance: 150,
       withinRadius: true
-    })
-
-    // Mock database operations
-    mockPrisma.lecturer.findUnique.mockResolvedValue({
-      id: 'lecturer-123',
-      userId: 'user-123',
-      employeeId: 'EMP001'
     } as any)
-
-    mockPrisma.schedule.findFirst.mockResolvedValue({
-      id: 'schedule-123',
-      lecturerId: 'lecturer-123',
-      courseId: 'course-123',
-      classroomId: 'classroom-123'
-    } as any)
-
-    mockPrisma.attendanceRecord.create.mockResolvedValue({
+    createRecord.mockResolvedValue({
       id: 'attendance-123',
-      lecturerId: 'lecturer-123',
-      scheduleId: 'schedule-123',
-      gpsLatitude: 5.6037,
-      gpsLongitude: -0.1870,
+      timestamp: new Date('2026-04-27T09:30:00.000Z'),
       locationVerified: true,
-      createdAt: new Date()
-    } as any)
+      method: 'onsite',
+    })
+    createAuditLog.mockResolvedValue({ id: 'audit-123' })
 
-    // Create request
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
-      body: JSON.stringify({
-        gpsLatitude: 5.6037,
-        gpsLongitude: -0.1870
-      })
+      body: JSON.stringify(onsiteRequestBody)
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.message).toBe('Attendance recorded successfully')
     expect(mockVerifyLocationForAttendance).toHaveBeenCalledWith({
-      latitude: 5.6037,
-      longitude: -0.1870
+      latitude: onsiteRequestBody.latitude,
+      longitude: onsiteRequestBody.longitude
     })
-    expect(mockPrisma.attendanceRecord.create).toHaveBeenCalledWith({
-      data: {
-        lecturerId: 'lecturer-123',
-        scheduleId: 'schedule-123',
-        gpsLatitude: 5.6037,
-        gpsLongitude: -0.1870,
-        locationVerified: true
-      }
+    expect(createRecord).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        lecturerId: lecturer.id,
+        courseScheduleId: onsiteRequestBody.scheduleId,
+        gpsLatitude: onsiteRequestBody.latitude,
+        gpsLongitude: onsiteRequestBody.longitude,
+        locationVerified: true,
+        method: 'onsite',
+        remarks: onsiteRequestBody.remarks,
+        sessionDurationMet: true,
+      })
     })
+    expect(createAuditLog).toHaveBeenCalled()
   })
 
-  it('should reject attendance with invalid location', async () => {
-    // Mock session
+  it('rejects onsite attendance outside the allowed location radius', async () => {
     mockGetServerSession.mockResolvedValue({
       user: {
         id: 'user-123',
-        email: 'lecturer@upsa.edu.gh',
         role: 'LECTURER',
-        lecturerId: 'lecturer-123'
       }
     } as any)
-
-    // Mock location verification - outside UPSA radius
+    findFirstLecturer.mockResolvedValue(lecturer)
+    findFirstSchedule.mockResolvedValue(schedule)
+    findFirstRecord.mockResolvedValue(null)
     mockVerifyLocationForAttendance.mockReturnValue({
       verified: false,
       distance: 500,
       withinRadius: false
-    })
+    } as any)
 
-    // Create request with coordinates outside UPSA
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
-      body: JSON.stringify({
-        gpsLatitude: 5.6100,
-        gpsLongitude: -0.1900
-      })
+      body: JSON.stringify(onsiteRequestBody)
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Location verification failed. You must be within UPSA campus to mark attendance.')
-    expect(mockVerifyLocationForAttendance).toHaveBeenCalledWith({
-      latitude: 5.6100,
-      longitude: -0.1900
-    })
-    expect(mockPrisma.attendanceRecord.create).not.toHaveBeenCalled()
+    expect(data.error).toBe('Location verification failed: You are 500m away from campus (max allowed: 300m)')
+    expect(createRecord).not.toHaveBeenCalled()
   })
 
-  it('should reject attendance without authentication', async () => {
-    // Mock no session
+  it('rejects attendance without authentication', async () => {
     mockGetServerSession.mockResolvedValue(null)
 
-    // Create request
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
-      body: JSON.stringify({
-        gpsLatitude: 5.6037,
-        gpsLongitude: -0.1870
-      })
+      body: JSON.stringify(onsiteRequestBody)
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(401)
     expect(data.error).toBe('Unauthorized')
-    expect(mockVerifyLocationForAttendance).not.toHaveBeenCalled()
-    expect(mockPrisma.attendanceRecord.create).not.toHaveBeenCalled()
+    expect(findFirstLecturer).not.toHaveBeenCalled()
+    expect(createRecord).not.toHaveBeenCalled()
   })
 
-  it('should reject attendance with invalid coordinates format', async () => {
-    // Mock session
+  it('rejects invalid request payloads', async () => {
     mockGetServerSession.mockResolvedValue({
       user: {
         id: 'user-123',
-        email: 'lecturer@upsa.edu.gh',
         role: 'LECTURER',
-        lecturerId: 'lecturer-123'
       }
     } as any)
 
-    // Create request with invalid coordinates
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
       body: JSON.stringify({
-        gpsLatitude: 'invalid',
-        gpsLongitude: -0.1870
+        scheduleId: 'schedule-123',
+        latitude: 'invalid',
+        longitude: -0.187,
+        method: 'onsite',
       })
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(400)
-    expect(data.error).toContain('Validation error')
+    expect(data.error).toBe('Invalid request data')
     expect(mockVerifyLocationForAttendance).not.toHaveBeenCalled()
-    expect(mockPrisma.attendanceRecord.create).not.toHaveBeenCalled()
+    expect(createRecord).not.toHaveBeenCalled()
   })
 
-  it('should handle lecturer not found error', async () => {
-    // Mock session
+  it('returns 404 when the lecturer profile is missing', async () => {
     mockGetServerSession.mockResolvedValue({
       user: {
         id: 'user-123',
-        email: 'lecturer@upsa.edu.gh',
         role: 'LECTURER',
-        lecturerId: 'lecturer-123'
       }
     } as any)
+    findFirstLecturer.mockResolvedValue(null)
 
-    // Mock location verification - valid location
-    mockVerifyLocationForAttendance.mockReturnValue({
-      verified: true,
-      distance: 150,
-      withinRadius: true
-    })
-
-    // Mock lecturer not found
-    mockPrisma.lecturer.findUnique.mockResolvedValue(null)
-
-    // Create request
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
-      body: JSON.stringify({
-        gpsLatitude: 5.6037,
-        gpsLongitude: -0.1870
-      })
+      body: JSON.stringify(onsiteRequestBody)
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(404)
     expect(data.error).toBe('Lecturer not found')
-    expect(mockVerifyLocationForAttendance).toHaveBeenCalled()
-    expect(mockPrisma.attendanceRecord.create).not.toHaveBeenCalled()
+    expect(findFirstSchedule).not.toHaveBeenCalled()
+    expect(mockVerifyLocationForAttendance).not.toHaveBeenCalled()
   })
 
-  it('should handle no active schedule error', async () => {
-    // Mock session
+  it('returns 404 when the schedule is not assigned to the lecturer', async () => {
     mockGetServerSession.mockResolvedValue({
       user: {
         id: 'user-123',
-        email: 'lecturer@upsa.edu.gh',
         role: 'LECTURER',
-        lecturerId: 'lecturer-123'
       }
     } as any)
+    findFirstLecturer.mockResolvedValue(lecturer)
+    findFirstSchedule.mockResolvedValue(null)
 
-    // Mock location verification - valid location
-    mockVerifyLocationForAttendance.mockReturnValue({
-      verified: true,
-      distance: 150,
-      withinRadius: true
-    })
-
-    // Mock database operations
-    mockPrisma.lecturer.findUnique.mockResolvedValue({
-      id: 'lecturer-123',
-      userId: 'user-123',
-      employeeId: 'EMP001'
-    } as any)
-
-    // Mock no active schedule
-    mockPrisma.schedule.findFirst.mockResolvedValue(null)
-
-    // Create request
     const request = new NextRequest('http://localhost:3000/api/attendance/take', {
       method: 'POST',
-      body: JSON.stringify({
-        gpsLatitude: 5.6037,
-        gpsLongitude: -0.1870
-      })
+      body: JSON.stringify(onsiteRequestBody)
     })
 
-    // Execute
     const response = await POST(request)
     const data = await response.json()
 
-    // Assertions
     expect(response.status).toBe(404)
-    expect(data.error).toBe('No active schedule found for the current time')
-    expect(mockVerifyLocationForAttendance).toHaveBeenCalled()
-    expect(mockPrisma.attendanceRecord.create).not.toHaveBeenCalled()
+    expect(data.error).toBe('Schedule not found or unauthorized')
+    expect(mockVerifyLocationForAttendance).not.toHaveBeenCalled()
+    expect(createRecord).not.toHaveBeenCalled()
   })
 })

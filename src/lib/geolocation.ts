@@ -59,6 +59,25 @@ export function getUPSARadius(): number {
   return UPSA_RADIUS
 }
 
+export function isValidCoordinates(value: unknown): value is Coordinates {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const coords = value as Partial<Coordinates>
+
+  return (
+    typeof coords.latitude === 'number' &&
+    Number.isFinite(coords.latitude) &&
+    coords.latitude >= -90 &&
+    coords.latitude <= 90 &&
+    typeof coords.longitude === 'number' &&
+    Number.isFinite(coords.longitude) &&
+    coords.longitude >= -180 &&
+    coords.longitude <= 180
+  )
+}
+
 // Validate coordinates format
 export function isLocationValid(
   lat1: number, 
