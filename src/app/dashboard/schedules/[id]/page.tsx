@@ -13,6 +13,7 @@ interface Schedule {
   sessionType: string
   venue: string
   isActive: boolean
+  isOverload: boolean
   // createdAt: string // Removed as it does not exist in schema
   course: {
     id: string
@@ -289,11 +290,16 @@ export default function SchedulePage({ params }: { params: Promise<{ id: string 
 
               <div>
                 <label className="block text-sm font-medium text-gray-500">Status</label>
-                <div className="mt-1">
+                <div className="mt-1 flex gap-2">
                   <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                     schedule.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
                     {schedule.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                    schedule.isOverload ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {schedule.isOverload ? 'Overload' : 'Regular Load'}
                   </span>
                 </div>
               </div>

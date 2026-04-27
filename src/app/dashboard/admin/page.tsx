@@ -62,6 +62,13 @@ const adminCards: DashboardCard[] = [
     href: '/dashboard/import',
     color: 'bg-indigo-500',
     icon: 'upload'
+  },
+  {
+    title: 'Overload and Adjunct Management',
+    description: 'Mark overload courses on schedules and track adjunct lecturers for claim processing',
+    href: '/dashboard/schedules',
+    color: 'bg-orange-500',
+    icon: 'briefcase'
   }
 ]
 
@@ -113,6 +120,14 @@ const getIcon = (iconName: string) => {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+      />
+    ),
+    briefcase: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2H10a2 2 0 00-2 2v2m8 0H8m8 0h3a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h3"
       />
     )
   }

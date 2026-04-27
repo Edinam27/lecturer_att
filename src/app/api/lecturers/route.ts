@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
             employmentType: lecturer.lecturer?.employmentType,
             rank: lecturer.lecturer?.rank,
             isAdjunct: lecturer.lecturer?.isAdjunct || false,
+            isOverload: lecturer.lecturer?.isOverload || false,
             scheduleCount: scheduleCount,
             overloadCount: overloadCount
           }

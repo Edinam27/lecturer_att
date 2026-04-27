@@ -51,6 +51,7 @@ interface FormData {
   startTime: string
   endTime: string
   sessionType: string
+  isOverload: boolean
 }
 
 export default function CreateSchedulePage() {
@@ -71,7 +72,8 @@ export default function CreateSchedulePage() {
     dayOfWeek: '1',
     startTime: '08:00',
     endTime: '10:00',
-    sessionType: 'LECTURE'
+    sessionType: 'LECTURE',
+    isOverload: false
   })
 
   useEffect(() => {
@@ -161,10 +163,10 @@ export default function CreateSchedulePage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }))
   }
 
@@ -388,6 +390,25 @@ export default function CreateSchedulePage() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-4">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="isOverload"
+                  name="isOverload"
+                  checked={formData.isOverload}
+                  onChange={handleChange}
+                  className="mt-1 h-4 w-4 cursor-pointer rounded border border-black text-orange-600 accent-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-1"
+                />
+                <label htmlFor="isOverload" className="cursor-pointer">
+                  <span className="block text-sm font-medium text-gray-900">Mark this schedule as overload</span>
+                  <span className="block text-sm text-gray-600">
+                    Use this only when this specific timetable entry should be paid as overload. Leave unchecked for a lecturer's expected teaching load.
+                  </span>
+                </label>
               </div>
             </div>
           </div>

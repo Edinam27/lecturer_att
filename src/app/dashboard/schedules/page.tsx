@@ -17,6 +17,7 @@ interface Schedule {
   endTime: string
   venue: string
   isActive: boolean
+  isOverload: boolean
   // createdAt: string // Removed as it does not exist in schema
   course: {
     id: string
@@ -127,13 +128,13 @@ export default function SchedulesPage() {
         body: JSON.stringify({
           courseId: scheduleData.course.id,
           classGroupId: scheduleData.classGroup.id,
-          lecturerId: parseInt(newLecturerId),
-          classroomId: scheduleData.classroom.id,
+          lecturerId: newLecturerId,
+          classroomId: scheduleData.classroom?.id || null,
           dayOfWeek: scheduleData.dayOfWeek,
           startTime: scheduleData.startTime,
           endTime: scheduleData.endTime,
           sessionType: scheduleData.sessionType,
-          isActive: scheduleData.isActive
+          isOverload: scheduleData.isOverload
         })
       })
 
@@ -183,6 +184,8 @@ export default function SchedulesPage() {
     if (dayFilter !== 'all' && schedule.dayOfWeek !== parseInt(dayFilter)) return false
     if (statusFilter === 'active' && !schedule.isActive) return false
     if (statusFilter === 'inactive' && schedule.isActive) return false
+    if (statusFilter === 'overload' && !schedule.isOverload) return false
+    if (statusFilter === 'regular' && schedule.isOverload) return false
     return true
   })
 
@@ -239,6 +242,8 @@ export default function SchedulesPage() {
             <option value="all">All Schedules</option>
             <option value="active">Active Only</option>
             <option value="inactive">Inactive Only</option>
+            <option value="overload">Overload Only</option>
+            <option value="regular">Regular Load Only</option>
           </select>
         </div>
         
@@ -283,6 +288,11 @@ export default function SchedulesPage() {
                     }`}>
                       {schedule.isActive ? 'Active' : 'Inactive'}
                     </span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                      schedule.isOverload ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {schedule.isOverload ? 'Overload' : 'Regular Load'}
+                    </span>
                   </div>
                 </div>
                 
@@ -318,6 +328,12 @@ export default function SchedulesPage() {
                     <span className="text-gray-500">Lecturer:</span>
                     <span className="font-medium">
                       {schedule.lecturer.firstName} {schedule.lecturer.lastName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Claim Type:</span>
+                    <span className={`font-medium ${schedule.isOverload ? 'text-orange-700' : 'text-gray-700'}`}>
+                      {schedule.isOverload ? 'Overload Course' : 'Expected Load'}
                     </span>
                   </div>
                 </div>
@@ -361,7 +377,7 @@ export default function SchedulesPage() {
 
       <div className="mt-8 bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Schedule Statistics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-gray-900">{schedules.length}</p>
             <p className="text-sm text-gray-500">Total Schedules</p>
@@ -383,6 +399,12 @@ export default function SchedulesPage() {
               {new Set(schedules.map(s => s.lecturer.id)).size}
             </p>
             <p className="text-sm text-gray-500">Unique Lecturers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-orange-600">
+              {schedules.filter(s => s.isOverload).length}
+            </p>
+            <p className="text-sm text-gray-500">Overload Schedules</p>
           </div>
         </div>
         

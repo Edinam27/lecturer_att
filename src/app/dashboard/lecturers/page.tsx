@@ -26,7 +26,6 @@ interface Lecturer {
     employmentType: string | null
     rank: string | null
     isAdjunct: boolean
-    isOverload: boolean
     scheduleCount: number
     overloadCount: number
   }
@@ -55,7 +54,6 @@ export default function LecturersPage() {
     department: '',
     rank: '',
     isAdjunct: false,
-    isOverload: false,
     isActive: true
   })
   const [formError, setFormError] = useState<string | null>(null)
@@ -126,7 +124,6 @@ export default function LecturersPage() {
             department: formData.department,
             rank: formData.rank,
             isAdjunct: formData.isAdjunct,
-            isOverload: formData.isOverload,
             isActive: formData.isActive
         })
       })
@@ -212,7 +209,6 @@ export default function LecturersPage() {
       department: lecturer.lecturer.department || '',
       rank: lecturer.lecturer.rank || '',
       isAdjunct: lecturer.lecturer.isAdjunct,
-      isOverload: lecturer.lecturer.isOverload,
       isActive: lecturer.isActive
     })
     setIsEditOpen(true)
@@ -229,7 +225,6 @@ export default function LecturersPage() {
       department: '',
       rank: '',
       isAdjunct: false,
-      isOverload: false,
       isActive: true
     })
   }
@@ -443,14 +438,9 @@ export default function LecturersPage() {
               />
               <Label htmlFor="isAdjunct">Is Adjunct (Part-time)</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="isOverload" 
-                checked={formData.isOverload} 
-                onCheckedChange={(checked) => setFormData({...formData, isOverload: checked})} 
-              />
-              <Label htmlFor="isOverload">Overload Status</Label>
-            </div>
+            <p className="text-xs text-gray-500">
+              Overload is now marked on individual schedules so only the correct timetable entries are treated as overload claims.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
@@ -503,14 +493,9 @@ export default function LecturersPage() {
                 />
                 <Label htmlFor="edit-isAdjunct">Is Adjunct (Part-time)</Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch 
-                  id="edit-isOverload" 
-                  checked={formData.isOverload} 
-                  onCheckedChange={(checked) => setFormData({...formData, isOverload: checked})} 
-                />
-                <Label htmlFor="edit-isOverload">Overload Status</Label>
-              </div>
+            <p className="text-xs text-gray-500">
+              Update overload courses from the schedules page where each timetable entry can be marked accurately.
+            </p>
              <div className="flex items-center space-x-2">
               <Switch 
                 id="edit-isActive" 

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         startTime: true,
         endTime: true,
         sessionType: true,
+        isOverload: true,
         meetingLink: true,
         course: {
           select: {
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      isOverload: schedule.isOverload,
       meetingLink: schedule.meetingLink,
       resolvedMeetingLink: resolveMeetingLink(
         schedule.meetingLink,
@@ -165,7 +167,8 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       dayOfWeek,
       startTime,
       endTime,
-      sessionType
+      sessionType,
+      isOverload
     } = body
 
     // Check if schedule exists
@@ -271,7 +274,8 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         dayOfWeek,
         startTime,
         endTime,
-        sessionType
+        sessionType,
+        ...(isOverload !== undefined ? { isOverload: Boolean(isOverload) } : {})
       },
       select: {
         id: true,
@@ -279,6 +283,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         startTime: true,
         endTime: true,
         sessionType: true,
+        isOverload: true,
         course: {
           select: {
             id: true,
@@ -338,6 +343,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      isOverload: schedule.isOverload,
       venue: schedule.classroom ? `${schedule.classroom.building?.name || 'Unknown Building'} - ${schedule.classroom.name}` : 'Virtual',
       isActive: true,
       course: {

@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
           select: {
             startTime: true,
             endTime: true,
+            isOverload: true,
             course: {
               select: {
                 id: true,
@@ -132,11 +133,15 @@ export async function GET(request: NextRequest) {
       return !isCancelled
     })
 
+    const claimEligibleRecords = validRecords.filter((record) =>
+      lecturer.isAdjunct || record.courseSchedule.isOverload
+    )
+
     // Group records by Course
     // We can key by courseCode or courseId
     const recordsByCourse: Record<string, any[]> = {}
 
-    validRecords.forEach((record) => {
+    claimEligibleRecords.forEach((record) => {
       const schedule = record.courseSchedule
       const course = schedule.course
       const courseKey = course.id

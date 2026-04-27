@@ -46,6 +46,7 @@ interface Schedule {
   endTime: string;
   sessionType: string;
   isActive: boolean;
+  isOverload: boolean;
   course: {
     id: string;
     code: string;
@@ -98,6 +99,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     startTime: '',
     endTime: '',
     sessionType: 'LECTURE',
+    isOverload: false,
     isActive: true,
   });
 
@@ -139,6 +141,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
         startTime: scheduleData.startTime || '',
         endTime: scheduleData.endTime || '',
         sessionType: scheduleData.sessionType || 'LECTURE',
+        isOverload: Boolean(scheduleData.isOverload),
         isActive: true, // Default to true as it's not currently in schema
       });
 
@@ -193,6 +196,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
           startTime: formData.startTime,
           endTime: formData.endTime,
           sessionType: formData.sessionType,
+          isOverload: formData.isOverload,
           isActive: formData.isActive
         }),
       });
@@ -416,6 +420,25 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
                     required
                     className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="isOverload"
+                    name="isOverload"
+                    checked={formData.isOverload}
+                    onChange={handleInputChange}
+                    className="mt-1 h-4 w-4 cursor-pointer rounded border border-black text-orange-600 accent-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-1"
+                  />
+                  <label htmlFor="isOverload" className="cursor-pointer">
+                    <span className="block text-sm font-medium text-gray-900">Mark this schedule as overload</span>
+                    <span className="block text-sm text-gray-600">
+                      Enable this only for timetable entries that count as overload. Leave it unchecked for the lecturer&apos;s regular teaching load.
+                    </span>
+                  </label>
                 </div>
               </div>
 

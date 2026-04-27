@@ -284,13 +284,13 @@ export default function ClaimFormPage() {
       const { default: FileSaver } = await import('file-saver')
       const saveAs = FileSaver.saveAs || FileSaver
 
-      // Filter lecturers: Adjunct OR Overload Status OR Overload Count > 0
+      // Adjunct lecturers claim all teaching; full-time lecturers claim only schedules marked as overload.
       const targetLecturers = lecturers.filter(l => 
-        (l.lecturer?.isAdjunct) || (l.lecturer?.isOverload) || (l.lecturer?.overloadCount && l.lecturer.overloadCount > 0)
+        (l.lecturer?.isAdjunct) || (l.lecturer?.overloadCount && l.lecturer.overloadCount > 0)
       )
 
       if (targetLecturers.length === 0) {
-        alert('No lecturers found with Overload or Adjunct status.')
+        alert('No lecturers found with adjunct status or overload schedules.')
         setBulkLoading(false)
         return
       }
@@ -336,6 +336,9 @@ export default function ClaimFormPage() {
       {/* Controls - Hidden when printing */}
       <div className="print:hidden max-w-5xl mx-auto bg-white p-6 rounded-lg shadow-sm mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Lecturer Claim Form Generator</h1>
+        <p className="text-sm text-gray-600 mb-6">
+          Adjunct lecturers claim all assigned teaching. Full-time lecturers only claim attendance from schedules marked as overload.
+        </p>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           {(session?.user?.role === 'ADMIN' || session?.user?.role === 'COORDINATOR') && (
@@ -414,7 +417,7 @@ export default function ClaimFormPage() {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                             </svg>
-                            Compile All Overload/Adjunct Claims
+                            Compile All Adjunct/Overload Claims
                         </>
                     )}
                 </button>
@@ -448,7 +451,7 @@ export default function ClaimFormPage() {
                 )}
               </button>
               <span className="text-xs text-gray-500">
-                Generates a ZIP file containing claim forms for all Adjunct lecturers and those with Overload courses for the selected period.
+                Generates a ZIP file for adjunct lecturers and for full-time lecturers who have schedules marked as overload in the selected period.
               </span>
             </div>
           </div>

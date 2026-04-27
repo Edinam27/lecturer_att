@@ -23,11 +23,21 @@ export async function POST(request: NextRequest) {
       dayOfWeek,
       startTime,
       endTime,
-      sessionType
+      sessionType,
+      isOverload
     } = body
 
     // Validate required fields
-    if (!courseId || !classGroupId || !lecturerId || !dayOfWeek || !startTime || !endTime || !sessionType) {
+    if (
+      !courseId ||
+      !classGroupId ||
+      !lecturerId ||
+      dayOfWeek === undefined ||
+      dayOfWeek === null ||
+      !startTime ||
+      !endTime ||
+      !sessionType
+    ) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -150,7 +160,8 @@ export async function POST(request: NextRequest) {
         dayOfWeek: dayOfWeekInt,
         startTime: startTimeStr,
         endTime: endTimeStr,
-        sessionType
+        sessionType,
+        isOverload: Boolean(isOverload)
       }
     })
 
@@ -222,6 +233,7 @@ export async function GET(request: NextRequest) {
         startTime: true,
         endTime: true,
         sessionType: true,
+        isOverload: true,
         meetingLink: true,
         course: {
           select: {
@@ -285,6 +297,7 @@ export async function GET(request: NextRequest) {
       startTime: schedule.startTime,
       endTime: schedule.endTime,
       sessionType: schedule.sessionType,
+      isOverload: schedule.isOverload,
       meetingLink: schedule.meetingLink,
       resolvedMeetingLink: resolveMeetingLink(
         schedule.meetingLink,

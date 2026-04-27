@@ -96,8 +96,8 @@ export async function PUT(
 
       // Update Lecturer fields if provided
       const lecturerUpdateData: any = {};
-      // if (isAdjunct !== undefined) lecturerUpdateData.isAdjunct = isAdjunct;
-      // if (isOverload !== undefined) lecturerUpdateData.isOverload = isOverload;
+      if (isAdjunct !== undefined) lecturerUpdateData.isAdjunct = Boolean(isAdjunct);
+      if (isOverload !== undefined) lecturerUpdateData.isOverload = Boolean(isOverload);
       if (department) lecturerUpdateData.department = department;
       if (rank) lecturerUpdateData.rank = rank;
       if (employeeId) lecturerUpdateData.employeeId = employeeId;
@@ -111,7 +111,7 @@ export async function PUT(
              user: true,
              courseSchedules: {
                 select: { 
-                    // isOverload: true 
+                    isOverload: true,
                     id: true
                 }
              }
@@ -126,7 +126,7 @@ export async function PUT(
              user: true,
              courseSchedules: {
                 select: { 
-                    // isOverload: true 
+                    isOverload: true,
                     id: true
                 }
              }
@@ -140,8 +140,7 @@ export async function PUT(
     }
 
     const scheduleCount = updatedLecturer.courseSchedules.length;
-    // const overloadCount = updatedLecturer.courseSchedules.filter(s => s.isOverload).length;
-    const overloadCount = 0; // Placeholder
+    const overloadCount = updatedLecturer.courseSchedules.filter(s => s.isOverload).length;
 
     return NextResponse.json({
       id: updatedLecturer.id,
@@ -158,8 +157,8 @@ export async function PUT(
         department: updatedLecturer.department,
         employmentType: updatedLecturer.employmentType,
         rank: updatedLecturer.rank,
-        isAdjunct: false, // updatedLecturer.isAdjunct,
-        isOverload: false, // updatedLecturer.isOverload,
+        isAdjunct: updatedLecturer.isAdjunct,
+        isOverload: updatedLecturer.isOverload,
         scheduleCount: scheduleCount,
         overloadCount: overloadCount
       }
